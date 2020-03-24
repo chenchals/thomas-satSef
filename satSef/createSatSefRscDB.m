@@ -306,8 +306,10 @@ function [outSpkCorr] = getStaticRscForPair(cellPair,xSpkTimes,ySpkTimes,evntTim
                         {rasterBins},{XRasters},{staticWin},'UniformOutput',false);
                     ySpkCounts = cellfun(@(r,x,w) sum(x(:,r>=w(1) & r<=w(2)),2),...
                         {rasterBins},{YRasters},{staticWin},'UniformOutput',false);
-                    rho_pval = {getCorrData(xSpkCounts{1},ySpkCounts{1},'Pearson')};
-                    
+                    %rho_pval = {getCorrData(xSpkCounts{1},ySpkCounts{1},'Pearson')};
+                    % we need the critical value of rho for .10, .05, .01 significance
+                    [rho_pval,opts(evId,1).critRho10,opts(evId,1).critRho05,opts(evId,1).critRho01] =...
+                           getCorrData(xSpkCounts{1},ySpkCounts{1},'Pearson');
                     opts(evId,1).(['xSpkCount_win' fieldSuffix]) = xSpkCounts;
                     opts(evId,1).(['ySpkCount_win' fieldSuffix]) = ySpkCounts;
                     opts(evId,1).(['rho_pval_static' fieldSuffix]) = rho_pval;
@@ -316,9 +318,14 @@ function [outSpkCorr] = getStaticRscForPair(cellPair,xSpkTimes,ySpkTimes,evntTim
                     xSpkCounts = cellfun(@(r,x,w) sum(x(:,r>=w(1) & r<=w(2)),2),...
                         {rasterBins},{xRasters_Z_baseline},{staticWin},'UniformOutput',false);
                     ySpkCounts = cellfun(@(r,x,w) sum(x(:,r>=w(1) & r<=w(2)),2),...
-                        {rasterBins},{yRasters_Z_baseline},{staticWin},'UniformOutput',false);                    
-                    rho_pval = {getCorrData(xSpkCounts{1},ySpkCounts{1},'Pearson')};
+                        {rasterBins},{yRasters_Z_baseline},{staticWin},'UniformOutput',false);                     
                     
+                    % We also need the critical valur of rho for .10, .05,
+                    % .01 significance
+                    %rho_pval = {getCorrData(xSpkCounts{1},ySpkCounts{1},'Pearson')};
+                    [rho_pval,opts(evId,1).critRho10_Z_baseline,opts(evId,1).critRho05_Z_baseline,opts(evId,1).critRho01_Z_baseline] = ...
+                        getCorrData(xSpkCounts{1},ySpkCounts{1},'Pearson');
+                                        
                     opts(evId,1).(['xSpkCount_win_Z_baseline' fieldSuffix]) = xSpkCounts;
                     opts(evId,1).(['ySpkCount_win_Z_baseline' fieldSuffix]) = ySpkCounts;
                     opts(evId,1).(['rho_pval_static_Z_baseline' fieldSuffix]) = rho_pval;
