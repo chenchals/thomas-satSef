@@ -120,7 +120,7 @@ function [] = saveSpkCorrData(oFn,varToSave)
     fprintf('Saving file : %s ...',oFn)
     tempConditions = varToSave;
     save(oFn,'-v7.3','-struct','tempConditions');
-    fprintf('%d\n',toc);
+    fprintf('%.3f sec.\n',toc);
 end
 
 
@@ -165,19 +165,20 @@ function [outSpkCorr] = getStaticRscForPair(cellPair,xSpkTimes,ySpkTimes,evntTim
 
     units.(XCellId) = xSpkTimes;
     units.(YCellId) = ySpkTimes;
-    
-    units.('X_trialMeanStd') = SpikeUtils.getTrialMeanStd(xSpkTimes);
-    units.('Y_trialMeanStd') = SpikeUtils.getTrialMeanStd(ySpkTimes);
-    
+       
     baselineWinForMeanStd = [-600 -100];
     temp = SpikeUtils.alignSpikeTimes(xSpkTimes,evntTimes.CueOn{1},baselineWinForMeanStd);
     temp = SpikeUtils.rasters(temp,baselineWinForMeanStd);
     temp = temp.rasters;
-    units.('X_baselineMeanStd') = arrayfun(@(x) [mean(temp(x,:)) std(temp(x,:))],(1:size(temp,1))','UniformOutput',false );
+    blFR = sum(temp,2)/range(baselineWinForMeanStd);
+    blMeanStd = [mean(blFR) std(blFR)];
+    units.('X_baselineMeanStd') = {blMeanStd};
     temp = SpikeUtils.alignSpikeTimes(ySpkTimes,evntTimes.CueOn{1},baselineWinForMeanStd);
     temp = SpikeUtils.rasters(temp,baselineWinForMeanStd);
     temp = temp.rasters;
-    units.('Y_baselineMeanStd') = arrayfun(@(x) [mean(temp(x,:)) std(temp(x,:))],(1:size(temp,1))','UniformOutput',false );
+    blFR = sum(temp,2)/range(baselineWinForMeanStd);
+    blMeanStd = [mean(blFR) std(blFR)];
+    units.('Y_baselineMeanStd') = {blMeanStd};
     clear temp;
     for cond = 1:numel(conditions)
         try
@@ -265,13 +266,10 @@ function [outSpkCorr] = getStaticRscForPair(cellPair,xSpkTimes,ySpkTimes,evntTim
                 clear tempRast;
                 % Z scores
                 % get Z score for given sample using means and stds specified for each trial
-                % Z-Score using baseline mean and std
+                % Z-Score using baseline mean and std                
                 fx_getZscore = @(rast,meanStd) cell2mat(arrayfun(@(x) (double(rast(x,:))- meanStd{1}(1))./meanStd{1}(2), (1:size(rast,1))','UniformOutput',false));
                 xRasters_Z_baseline = fx_getZscore(XRasters,units.X_baselineMeanStd);
                 yRasters_Z_baseline = fx_getZscore(YRasters,units.Y_baselineMeanStd);
-                xRasters_Z_trial = fx_getZscore(XRasters,units.X_trialMeanStd);
-                yRasters_Z_trial = fx_getZscore(YRasters,units.Y_trialMeanStd);
-
                 % gather vars fo corrSpk_PAIR_xxxx.mat
                 opts(evId,1).condition = {condition};
                 opts(evId,1).alignedName = {alignedName};
@@ -285,15 +283,11 @@ function [outSpkCorr] = getStaticRscForPair(cellPair,xSpkTimes,ySpkTimes,evntTim
                 opts(evId,1).yCellSpikeTimes = {YAligned};
                 opts(evId,1).xBaselineMeanStd = {cell2mat(units.X_baselineMeanStd)};
                 opts(evId,1).yBaselineMeanStd = {cell2mat(units.Y_baselineMeanStd)};
-                opts(evId,1).xTrialMeanStd = {cell2mat(units.X_trialMeanStd)};
-                opts(evId,1).yTrialMeanStd = {cell2mat(units.Y_trialMeanStd)};
                 opts(evId,1).rasterBins = {rasterBins};
                 opts(evId,1).xRasters = {XRasters};
                 opts(evId,1).yRasters = {YRasters};
                 opts(evId,1).xRasters_Z_baseline = {xRasters_Z_baseline};
                 opts(evId,1).yRasters_Z_baseline = {yRasters_Z_baseline};
-                opts(evId,1).xRasters_Z_trial = {xRasters_Z_trial};
-                opts(evId,1).yRasters_Z_trial = {yRasters_Z_trial};
                                 
                 % Compute spike corrs for static windows for each aligned event
                 for sWin = 1:numel(staticWinsAlignTs)
@@ -330,16 +324,6 @@ function [outSpkCorr] = getStaticRscForPair(cellPair,xSpkTimes,ySpkTimes,evntTim
                     opts(evId,1).(['ySpkCount_win_Z_baseline' fieldSuffix]) = ySpkCounts;
                     opts(evId,1).(['rho_pval_static_Z_baseline' fieldSuffix]) = {rho_pval2};
                     
-                    % Static windows spike corr for - Z-scored (using Baseline mean/std) count
-                    xSpkCounts = cellfun(@(r,x,w) sum(x(:,r>=w(1) & r<=w(2)),2),...
-                        {rasterBins},{xRasters_Z_trial},{staticWin},'UniformOutput',false);
-                    ySpkCounts = cellfun(@(r,x,w) sum(x(:,r>=w(1) & r<=w(2)),2),...
-                        {rasterBins},{yRasters_Z_trial},{staticWin},'UniformOutput',false);
-                    rho_pval = {getCorrData(xSpkCounts{1},ySpkCounts{1},'Pearson')};
-
-                    opts(evId,1).(['xSpkCount_win_Z_trial' fieldSuffix]) = xSpkCounts;
-                    opts(evId,1).(['ySpkCount_win_Z_trial' fieldSuffix]) = ySpkCounts;
-                    opts(evId,1).(['rho_pval_static_Z_trial' fieldSuffix]) = rho_pval;
                 end
                                 
             end % for alignEvents
