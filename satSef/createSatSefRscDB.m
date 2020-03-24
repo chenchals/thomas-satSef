@@ -308,11 +308,11 @@ function [outSpkCorr] = getStaticRscForPair(cellPair,xSpkTimes,ySpkTimes,evntTim
                         {rasterBins},{YRasters},{staticWin},'UniformOutput',false);
                     %rho_pval = {getCorrData(xSpkCounts{1},ySpkCounts{1},'Pearson')};
                     % we need the critical value of rho for .10, .05, .01 significance
-                    [rho_pval,opts(evId,1).critRho10,opts(evId,1).critRho05,opts(evId,1).critRho01] =...
+                    [rho_pval1,opts(evId,1).critRho10,opts(evId,1).critRho05,opts(evId,1).critRho01] =...
                            getCorrData(xSpkCounts{1},ySpkCounts{1},'Pearson');
                     opts(evId,1).(['xSpkCount_win' fieldSuffix]) = xSpkCounts;
                     opts(evId,1).(['ySpkCount_win' fieldSuffix]) = ySpkCounts;
-                    opts(evId,1).(['rho_pval_static' fieldSuffix]) = rho_pval;
+                    opts(evId,1).(['rho_pval_static' fieldSuffix]) = {rho_pval1};
                     
                     % Static windows spike corr for - Z-scored (using Baseline mean/std) count
                     xSpkCounts = cellfun(@(r,x,w) sum(x(:,r>=w(1) & r<=w(2)),2),...
@@ -323,12 +323,12 @@ function [outSpkCorr] = getStaticRscForPair(cellPair,xSpkTimes,ySpkTimes,evntTim
                     % We also need the critical valur of rho for .10, .05,
                     % .01 significance
                     %rho_pval = {getCorrData(xSpkCounts{1},ySpkCounts{1},'Pearson')};
-                    [rho_pval,opts(evId,1).critRho10_Z_baseline,opts(evId,1).critRho05_Z_baseline,opts(evId,1).critRho01_Z_baseline] = ...
+                    [rho_pval2,opts(evId,1).critRho10_Z_baseline,opts(evId,1).critRho05_Z_baseline,opts(evId,1).critRho01_Z_baseline] = ...
                         getCorrData(xSpkCounts{1},ySpkCounts{1},'Pearson');
                                         
                     opts(evId,1).(['xSpkCount_win_Z_baseline' fieldSuffix]) = xSpkCounts;
                     opts(evId,1).(['ySpkCount_win_Z_baseline' fieldSuffix]) = ySpkCounts;
-                    opts(evId,1).(['rho_pval_static_Z_baseline' fieldSuffix]) = rho_pval;
+                    opts(evId,1).(['rho_pval_static_Z_baseline' fieldSuffix]) = {rho_pval2};
                     
                     % Static windows spike corr for - Z-scored (using Baseline mean/std) count
                     xSpkCounts = cellfun(@(r,x,w) sum(x(:,r>=w(1) & r<=w(2)),2),...
@@ -404,54 +404,4 @@ function [critRho10,critRho05,critRho01] = getCriticalTvalue(sampleSizeArray)
     critRho10 = cell2mat(critRho10);
     critRho05 = cell2mat(critRho05);
     critRho01 = cell2mat(critRho01);
-end
-
-function [xWaves,yWaves] = getWaveforms(wavDir,cellPairInfo,dat)
-    % inline function for aligning, windowing TS of trials
-    fx_alignTs = @(tsByTrl,alinTimeByTrl) arrayfun(@(idx) tsByTrl{idx} - alinTimeByTrl(idx),(1:numel(alinTimeByTrl))','UniformOutput',false);
-    fx_alindTsToWin = @(alindTsByTrl, tsWin) cellfun(@(x) x(x>=tsWin(1) & x<=tsWin(2)),alindTsByTrl,'UniformOutput',false);
-    % find matching indices for 2 arrrays of aligned ts
-    % max abs. diff is 1 ms
-    diffMax = 1; % 1 ms different
-    fx_matchedSpkIdx = @(alindUTs,alindWfTs) arrayfun(@(uTs) find(abs(alindWfTs - uTs)<=diffMax,1),alindUTs,'UniformOutput',false);
-    if isstruct(dat)
-      dat = struct2table(dat,'AsArray',true);
-    end
-    xWaves = cell(size(dat,1),1);
-    yWaves = cell(size(dat,1),1);
-
-    % get all waves parse for sel. trials and match wave Ts.
-    % X Unit
-    unitName = sprintf('Unit_%03d',cellPairInfo.X_unitNum);
-    if ~exist(fullfile(wavDir,[unitName '.mat']),'file')
-        return;
-    end
-    allWavs = load(fullfile(wavDir,[unitName '.mat']));
-    wavTsX = allWavs.(unitName).wavSearchTs{1};
-    wavsX = allWavs.(unitName).wavSearch{1};
-    % Y Unit
-    unitName = sprintf('Unit_%03d',cellPairInfo.Y_unitNum);
-    allWavs = load(fullfile(wavDir,[unitName '.mat']));
-    wavTsY = allWavs.(unitName).wavSearchTs{1};
-    wavsY = allWavs.(unitName).wavSearch{1};
-
-    for jj = 1:size(dat,1)
-        selTrls = dat.trialNosByCondition{jj};
-        alignTime = dat.alignTime{jj};
-        alignWin = dat.alignedTimeWin{jj};
-        % align ts from waveform data
-        alindWfTsX = fx_alignTs(wavTsX(selTrls),alignTime);
-        alindWfTsXWin = fx_alindTsToWin(alindWfTsX,alignWin);
-        alindWfTsY = fx_alignTs(wavTsY(selTrls),alignTime);
-        alindWfTsYWin = fx_alindTsToWin(alindWfTsY,alignWin);
-        % aligned windowd unit ts
-        alindUnitTsXWin = dat.xCellSpikeTimes{jj};
-        alindUnitTsYWin = dat.yCellSpikeTimes{jj};
-        % find matching indices for extracting waveforms
-        spkIdxByTrlX = cellfun(@(aUts,aWts) fx_matchedSpkIdx(aUts,aWts),alindUnitTsXWin,alindWfTsXWin,'UniformOutput',false);
-        xWaves{jj} = cellfun(@(wfByTrl,idxByTrl) wfByTrl(cell2mat(idxByTrl'),:),wavsX(selTrls),spkIdxByTrlX,'UniformOutput',false);
-        spkIdxByTrlY = cellfun(@(aUts,aWts) fx_matchedSpkIdx(aUts,aWts),alindUnitTsYWin,alindWfTsYWin,'UniformOutput',false);
-        yWaves{jj} = cellfun(@(wfByTrl,idxByTrl) wfByTrl(cell2mat(idxByTrl'),:),wavsY(selTrls),spkIdxByTrlY,'UniformOutput',false);
-
-    end
 end
