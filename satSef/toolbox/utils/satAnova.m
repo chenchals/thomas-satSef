@@ -1,4 +1,4 @@
-function [anovaResults] = satAnova(valsGroupsTbl,anoveModelName,doMultCompareFlag,alpha)
+function [anovaResults] = satAnova(valsGroupsTbl,anovaModelName,doMultCompareFlag,alpha)
 %SATANOVA Do a multiway anova for the given table of inputs
 %   Column1 = Y-Values numeric
 %   Columns (2 to end) = groups/factors over which the anonan is run
@@ -27,7 +27,7 @@ end
 anovaResults = struct();
 anovaTblVarNames = {'Source', 'SumSq' 'df' 'IsSingular' 'MeanSq' 'F'  'ProbGtF'};
 
-[~,temp,anovaStats] = anovan(yVals,groups,'model',anoveModelName,'varnames',groupNames, 'display',anovaDisplay);
+[~,temp,anovaStats] = anovan(yVals,groups,'model',anovaModelName,'varnames',groupNames, 'display',anovaDisplay);
 anovaTbl = cell2table(temp(2:end,:),'VariableNames',anovaTblVarNames);
 % add '*' p(F >= .05) and '**' p(F >=  .01)
 idx = find(~ismember(anovaTbl.Source,{'Error','Total'}));
