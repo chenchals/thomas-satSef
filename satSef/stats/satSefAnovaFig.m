@@ -26,6 +26,49 @@ statsAnova.FastAnovaTbl = statsAnovaF1Outcome.Fast_PostSaccade.anovaTbl;
 statsAnova.FastStatsTbl = statsAnovaF1Outcome.Fast_PostSaccade.statsTbl;
 clearvars statsAnovaF1Outcome useCols
 
+%% plot
+newFigure
+fastClr = [0 0.7 0];
+accClr = [0.8 0 0];
+p1=subplot(2,2,1);
+t = statsAnova.FastStatsTbl;
+maxY = max(t.mean_rhoZ);
+bar(categorical(t.outcome),t.mean_rhoZ,'FaceColor',fastClr,'EdgeColor','none')
+hold on
+ebF = errorbar(categorical(t.outcome),t.mean_rhoZ,t.sem_rhoZ,'LineStyle','none','LineWidth',1,'Color','k');
+ylabel('R_{sc} SEF-FEF/SC Pairs')
+title('Fast')
+
+p2=subplot(2,2,2);
+t = statsAnova.AccurateStatsTbl;
+maxY = max([maxY,max(t.mean_rhoZ)]);
+bar(categorical(t.outcome),t.mean_rhoZ,'FaceColor',accClr,'EdgeColor','none')
+hold on
+ebA = errorbar(categorical(t.outcome),t.mean_rhoZ,t.sem_rhoZ,'LineStyle','none','LineWidth',1,'Color','k');
+ylabel('R_{sc} SEF-FEF/SC Pairs')
+title('Accurate')
+
+set([p1,p2],'YLim',[0 maxY*1.1])
+
+
+%% table to text for display
+axes(p1)
+text(0,-0.02,'FAST:')
+lines = [strsplit(evalc('disp(statsAnova.FastStatsTbl)'),'\n')'
+         strsplit(evalc('disp(statsAnova.FastOutcomeTbl)'),'\n')'
+         strsplit(evalc('disp(statsAnova.FastAnovaTbl)'),'\n')'];
+lines = regexprep(lines,{'<strong>','</strong>'},{'',''});
+text(0,-0.05,lines,'VerticalAlignment','top')
+
+axes(p2)
+text(0,-0.02,'ACCURATE:')
+lines = [strsplit(evalc('disp(statsAnova.AccurateStatsTbl)'),'\n')'
+         strsplit(evalc('disp(statsAnova.AccurateOutcomeTbl)'),'\n')'
+         strsplit(evalc('disp(statsAnova.AccurateAnovaTbl)'),'\n')'];
+lines = regexprep(lines,{'<strong>','</strong>'},{'',''});
+text(0,-0.05,lines,'VerticalAlignment','top')
+
+
 %%
 
 function [statsAnovaF1Outcome,statsAnovaF2ConditionByOutcome] = doAllAnova(spkCorr)

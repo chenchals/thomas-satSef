@@ -85,8 +85,8 @@ levelNamesNew = levelNamesNew(:,2:2:end);
 levelNamesNew = arrayfun(@(x) char(join(levelNamesNew(x,:),'_')),1:size(levelNamesNew,1),'UniformOutput',false)';
 
 resultsAsTbl = table();
-resultsAsTbl.levelName1 = arrayfun(@(x) levelNamesNew(x),results(:,1),'UniformOutput',false);
-resultsAsTbl.levelName2 = arrayfun(@(x) levelNamesNew(x),results(:,2),'UniformOutput',false);
+resultsAsTbl.levelName1 = arrayfun(@(x) levelNamesNew{x},results(:,1),'UniformOutput',false);
+resultsAsTbl.levelName2 = arrayfun(@(x) levelNamesNew{x},results(:,2),'UniformOutput',false);
 resultsAsTbl = [resultsAsTbl array2table(results(:,3:end),'VariableNames',{'loCI95','meanDiff','hiCI95','pval_H0'})];
 resultsAsTbl.isSignif05 = results(:,end)<=0.05;
 resultsAsTbl.isSignif01 = results(:,end)<=0.01;
