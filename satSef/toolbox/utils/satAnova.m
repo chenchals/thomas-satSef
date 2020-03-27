@@ -9,6 +9,7 @@ function [anovaResults] = satAnova(valsGroupsTbl,anovaModelName,doMultCompareFla
 %anoveModelName = 'linear'; %'interaction'
 %doMultCompareFlag = true;
 
+useBonferroni = false;
 anovaDisplay = 'off'; %'on'
 
 yVals = valsGroupsTbl{:,1};
@@ -44,9 +45,16 @@ end
 anovaResults.anovaTbl = anovaTbl;
 % Compare results for different LEVELS *WITHIN* each group/Factor independently 
 % for bonferroni use 'CType', ... see doc multcompare
+% 'CType' ? Type of critical value
+% 'tukey-kramer' (default) | 'hsd' | 'lsd' | 'bonferroni' | 'dunn-sidak' | 'scheffe'
+cType = 'tukey-kramer';
+if useBonferroni
+    cType = 'bonferroni';
+end
+
 if (doMultCompareFlag)
     for gr = 1:numel(groupNames)
-        [temp,~,~,grpNames] = multcompare(anovaStats,'Dimension',gr,'Alpha',alpha);
+        [temp,~,~,grpNames] = multcompare(anovaStats,'Dimension',gr,'Alpha',alpha,'CType',cType);
         anovaResults.(groupNames{gr}) = annotateMultcompareResults(temp,grpNames);
     end
     
@@ -57,7 +65,7 @@ if (doMultCompareFlag)
     for jj = 1:size(n2GrpComparisions,1)
         idx = n2GrpComparisions(jj,:);
         fn = char(join(groupNames(idx),'_'));
-        [temp,~,~,grpNames] = multcompare(anovaStats,'Dimension',idx,'Alpha',alpha);
+        [temp,~,~,grpNames] = multcompare(anovaStats,'Dimension',idx,'Alpha',alpha,'CType',cType);
         anovaResults.(fn) = annotateMultcompareResults(temp,grpNames);
     end
 end

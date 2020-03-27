@@ -11,65 +11,84 @@ spkCorr.epoch = spkCorr.alignedName;
 % take absolute value of correlation
 spkCorr.rhoR = abs(spkCorr.rhoRaw_150ms);
 spkCorr.rhoZ = abs(spkCorr.rhoZBaseline_150ms);
-%%
-% compute anova for the following epochs
-%spkCorr.rho = spkCorr.rhoZ;
 
-% for our plots: 1 way anova for each condition is used
-statsAnovaF1Outcome = doAnovaOutcome(spkCorr,'rhoZ');
+%% One-Way Anova foer outcomes for each SAT condition
+[statsAnovaOutcome] = computeOneWay(spkCorr,'rhoR');
+
+%% Two-way for SatCondition by Outcome
+% main effect : Sat Condition
+% Interaction term: condition by outcome: Specifically:
+%   Accurate_Correct vs Fast_Correct, 
+%   Accurate_ErroeChoice vs Fast_ErrorChoice,
+%   Accurate_ErrorTiming vs Fast_ErrorTiming
+statsAnovaF2CondByOutcome = doAnovaConditionByOutcome(spkCorr,'rhoZ');
+
+%%
+
+function [statsAnova] = computeOneWay(spkCorr, useRho)
+%% compute 1-way for coutcome for each SAT condition separately 
+statsAnovaF1Outcome = doAnovaOutcome(spkCorr,useRho);
+% flatten tables - Accurate
 statsAnova.AccurateOutcomeTbl = statsAnovaF1Outcome.Accurate_PostSaccade.outcome;
 statsAnova.AccurateAnovaTbl = statsAnovaF1Outcome.Accurate_PostSaccade.anovaTbl;
 statsAnova.AccurateStatsTbl = statsAnovaF1Outcome.Accurate_PostSaccade.statsTbl;
-
+% flatten tables - Fast
 statsAnova.FastOutcomeTbl = statsAnovaF1Outcome.Fast_PostSaccade.outcome;
 statsAnova.FastAnovaTbl = statsAnovaF1Outcome.Fast_PostSaccade.anovaTbl;
 statsAnova.FastStatsTbl = statsAnovaF1Outcome.Fast_PostSaccade.statsTbl;
-clearvars statsAnovaF1Outcome useCols
 
-%% plot
-newFigure
+% plot - outcomes for Fast Condition
+meanRhoCol = ['mean_' useRho];
+semRhoCol = ['sem_' useRho];
+% find max value
+f = statsAnova.FastStatsTbl;
+a = statsAnova.AccurateStatsTbl;
+[af] = [a.(meanRhoCol);f.(meanRhoCol)];
+maxY = max(af)*1.2;
+figure
 fastClr = [0 0.7 0];
-accClr = [0.8 0 0];
-p1=subplot(2,2,1);
-t = statsAnova.FastStatsTbl;
-maxY = max(t.mean_rhoZ);
-bar(categorical(t.outcome),t.mean_rhoZ,'FaceColor',fastClr,'EdgeColor','none')
+bar(categorical(f.outcome),f.(meanRhoCol),'FaceColor',fastClr,'EdgeColor','none')
 hold on
-ebF = errorbar(categorical(t.outcome),t.mean_rhoZ,t.sem_rhoZ,'LineStyle','none','LineWidth',1,'Color','k');
+ebF = errorbar(categorical(f.outcome),f.(meanRhoCol),f.(semRhoCol),'LineStyle','none','LineWidth',1,'Color','k');
 ylabel('R_{sc} SEF-FEF/SC Pairs')
-title('Fast')
+ylim([0 maxY])
+ppretty(2)
+title('Fast','Position',[0.5,maxY,0]);
 
-p2=subplot(2,2,2);
-t = statsAnova.AccurateStatsTbl;
-maxY = max([maxY,max(t.mean_rhoZ)]);
-bar(categorical(t.outcome),t.mean_rhoZ,'FaceColor',accClr,'EdgeColor','none')
-hold on
-ebA = errorbar(categorical(t.outcome),t.mean_rhoZ,t.sem_rhoZ,'LineStyle','none','LineWidth',1,'Color','k');
-ylabel('R_{sc} SEF-FEF/SC Pairs')
-title('Accurate')
-
-set([p1,p2],'YLim',[0 maxY*1.1])
-
-
-%% table to text for display
-axes(p1)
-text(0,-0.02,'FAST:')
-lines = [strsplit(evalc('disp(statsAnova.FastStatsTbl)'),'\n')'
+% print - Fast - stats for replotting / significance
+fastLines = [strsplit(evalc('disp(statsAnova.FastStatsTbl)'),'\n')'
          strsplit(evalc('disp(statsAnova.FastOutcomeTbl)'),'\n')'
          strsplit(evalc('disp(statsAnova.FastAnovaTbl)'),'\n')'];
-lines = regexprep(lines,{'<strong>','</strong>'},{'',''});
-text(0,-0.05,lines,'VerticalAlignment','top')
+fastLines = regexprep(fastLines,{'<strong>','</strong>'},{'',''});
+fprintf('--------------FAST - STATS - LINES-------------------------\n')
+fastLines
+fprintf('-----------------------------------------------------------\n')
 
-axes(p2)
-text(0,-0.02,'ACCURATE:')
-lines = [strsplit(evalc('disp(statsAnova.AccurateStatsTbl)'),'\n')'
+% plot - outcomes for Accurate condition
+figure
+accClr = [0.8 0 0];
+p2 = bar(categorical(a.outcome),a.(meanRhoCol),'FaceColor',accClr,'EdgeColor','none')
+hold on
+ebA = errorbar(categorical(a.outcome),a.(meanRhoCol),a.(semRhoCol),'LineStyle','none','LineWidth',1,'Color','k');
+ylabel('R_{sc} SEF-FEF/SC Pairs')
+ylim([0 maxY])
+ppretty(2)
+title('Accurate','Position',[0.5,maxY,0]);
+
+% print - Accurate - stats for replotting / significance
+accuLines = [strsplit(evalc('disp(statsAnova.AccurateStatsTbl)'),'\n')'
          strsplit(evalc('disp(statsAnova.AccurateOutcomeTbl)'),'\n')'
          strsplit(evalc('disp(statsAnova.AccurateAnovaTbl)'),'\n')'];
-lines = regexprep(lines,{'<strong>','</strong>'},{'',''});
-text(0,-0.05,lines,'VerticalAlignment','top')
+accuLines = regexprep(accuLines,{'<strong>','</strong>'},{'',''});
+
+fprintf('-----------ACCURATE - STATS - LINES------------------------\n')
+accuLines
+fprintf('-----------------------------------------------------------\n')
+
+end
 
 
-%%
+
 
 function [statsAnovaF1Outcome,statsAnovaF2ConditionByOutcome] = doAllAnova(spkCorr)
     statsAnovaF1Outcome = doAnovaOutcome(spkCorr);
@@ -106,7 +125,7 @@ function [anovaOutcome] = doAnovaOutcome(spkCorr,useRho)
         end
     end
 end
-function [anovaConditionByOutcome] = doAnovaConditionByOutcome(spkCorr)
+function [anovaConditionByOutcome] = doAnovaConditionByOutcome(spkCorr,useRho)
 % Do 2-Factor anova for the following -
 %    Factor1: condition
 %    Factor 2: outcome
@@ -123,7 +142,7 @@ anovaConditionByOutcome = struct();
         epoch = epochs{ep};
         idx = ismember(spkCorr.epoch,epoch);
         anovaTbl = table();
-        anovaTbl.rho = spkCorr{idx,'rho'};
+        anovaTbl.rho = spkCorr{idx,useRho};
         % 2-way anova satcondition by outcome
         % Factor-1
         anovaTbl.satCondition = spkCorr{idx,'satCondition'};
