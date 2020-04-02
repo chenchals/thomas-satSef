@@ -85,7 +85,8 @@ function [spkCorr] = createSatSefRscWithTrialControl()
         };
     staticWinsAlignTs(1).PostSaccade = [0 150];
     % minimum number of trials for all conditions, if not, then ignore pair  
-    nTrialsThreshold = 10; %10;%3 should reproduce the old result  
+    nTrialsThreshold = 10; %10;%3 should reproduce the old result 
+    nSubSamples = 1000; % number of times to subsample
     
     %% Process  (use parfor, when available)
     p = gcp('nocreate');
@@ -104,7 +105,9 @@ function [spkCorr] = createSatSefRscWithTrialControl()
     tic
     nCrossPairs = size(crossPairs,1);
     spkCorr = table();
-    parfor (cp = 1:nCrossPairs, 0) %nCrossPairs
+    pctRunOnAll warning off;
+    %parfor (cp = 1:nCrossPairs,nThreads)%nCrossPairs
+    parfor (cp = 1:nCrossPairs,nThreads)%nCrossPairs
         %%
         opts = struct();
         crossPair = crossPairs(cp,:);
@@ -115,7 +118,7 @@ function [spkCorr] = createSatSefRscWithTrialControl()
             getTrialNosForAllSatConds(trialTypes,trRem,conditions);
         nTrials4SubSample = min(struct2array(nTrials4SatConds));
         if nTrials4SubSample < nTrialsThreshold
-            % ignore this pair nd go to next pair
+            % ignore this pair and go to next pair
             continue;
         end
         % spike times
@@ -151,8 +154,15 @@ function [spkCorr] = createSatSefRscWithTrialControl()
                 ySpkCounts = cellfun(@(r,x,w) sum(x(:,r>=w(1) & r<=w(2)),2),...
                     {rasterBins},{YRasters},{staticWin},'UniformOutput',false);
                 yMeanFrWin = mean(ySpkCounts{1})*1000/range(staticWin);
-                [rho_pval,critRho10,critRho05,critRho01] =...
-                       getSpikeCountCorr(xSpkCounts{1},ySpkCounts{1},'Pearson');
+                [rho_pval] = getSpikeCountCorr(xSpkCounts{1},ySpkCounts{1},'Pearson');
+                % Do sub-sampling to estimate Rho and CI
+                % nTrials2SubSample, selTrials
+                [rhoEst,rhoEstSem,percentileCI,normalCI] = ...
+                     getEstimatedRhoAndConfInterval(xSpkCounts{1},...
+                                                    ySpkCounts{1},...
+                                                    nTrials4SubSample,...
+                                                    nSubSamples);
+
                 % output table/struct
                 % add crosspair info
                 cN = getPairColNmes();
@@ -176,17 +186,42 @@ function [spkCorr] = createSatSefRscWithTrialControl()
                 opts(evId,sc).(['rho_pval_win' fieldSuffix]) = {staticWin};                    
                 opts(evId,sc).(['rhoRaw' fieldSuffix]) = rho_pval(1);
                 opts(evId,sc).(['pvalRaw' fieldSuffix]) = rho_pval(2);
-                opts(evId,sc).(['signifRaw_05' fieldSuffix]) = rho_pval(2) < 0.05;                
+                opts(evId,sc).(['signifRaw_05' fieldSuffix]) = rho_pval(2) < 0.05;  
+
+                opts(evId,sc).nTrials4SubSample = nTrials4SubSample;
+                opts(evId,sc).nSubSamples = nSubSamples;
+                opts(evId,sc).(['rhoEstRaw' fieldSuffix]) = rhoEst;
+                opts(evId,sc).(['rhoEstSem' fieldSuffix]) = rhoEstSem;
+                opts(evId,sc).(['normalCI95' fieldSuffix]) = {normalCI};
+                opts(evId,sc).(['percentileCI95' fieldSuffix]) = {percentileCI};
+                opts(evId,sc).rhoRawWithinNormalCI = normalCI(1) < rho_pval(1) & rho_pval(1) < normalCI(2);
+                opts(evId,sc).rhoRawWithinPercentileCI = percentileCI(1) < rho_pval(1) & rho_pval(1) < percentileCI(2);               
                 
             end % for aligned event
             %spkCorr = [spkCorr; [crossPair(1,getPairColNmes) struct2table(opts,'AsArray',true)]];
         end % for condition
         spkCorr = [spkCorr;struct2table(opts)];
+        fprintf('Done pair %d of %d\n',cp,nCrossPairs)
     end
-    
-
 toc
+save('newRscWithTrialControl.mat','-v7.3','spkCorr');
 end
+
+function [rhoEst,rhoEstSem,percentileCI,normalCI] = getEstimatedRhoAndConfInterval(xSpkCounts,ySpkCounts,nTrials4SubSample,nSubSamples)
+    % inline fx for subsampling see DATASAMPLE
+    subSampleIdxs = arrayfun(@(x) datasample(1:numel(xSpkCounts),nTrials4SubSample,'Replace',true)',(1:nSubSamples),'UniformOutput',false);
+    temp = cellfun(@(x) getSpikeCountCorr(xSpkCounts(x),ySpkCounts(x),'Pearson'),subSampleIdxs','UniformOutput',false);
+    temp = cell2mat(temp);
+    rhoVec = temp(:,1);
+    % compute mean & sem
+    rhoEst = mean(rhoVec);
+    rhoEstSem = std(rhoVec)/sqrt(numel(rhoVec));
+    % compute t-statistic for 0.025, 0.975
+    ts = tinv([0.025,0.975],nTrials4SubSample-1);
+    normalCI = rhoEst + rhoEstSem*ts;
+    percentileCI =  prctile(rhoVec,[2.5, 97.5]);
+end
+
 
 function [cellPairs] = getCrossAreaPairs(pairsFile)
     allCellPairs = load(pairsFile);
@@ -198,21 +233,25 @@ function [cellPairs] = getCrossAreaPairs(pairsFile)
                     ismember(allCellPairs.Y_area,'SC'));
     cellPairs = allCellPairs(idxCrossArea,:);
     assert(isequal(cellPairs.X_sess,cellPairs.Y_sess),'********Fatal: Error X-Unit sessions and Y-Unit sessions do not match');
+    fprintf('Done getCrossAreaPairs()\n')
 end
 
 function [spikesSat] = getSpikes(spikeTimesFile)
     spikesSat = load(spikeTimesFile);
     spikesSat = spikesSat.spikesSAT;
+    fprintf('Done getSpikes()\n')
 end
 
 function [sessionTrialTypes] = getSessionTrialTypes(trialTypesFile)
     sessionTrialTypes = load(trialTypesFile);
     sessionTrialTypes = sessionTrialTypes.TrialTypesDB;
+    fprintf('Done getSessionTrialTypes()\n')
 end
 
 function [sessionEventTimes] = getSessionEventTimes(trialEventTimesFile)
     sessionEventTimes = load(trialEventTimesFile);
     sessionEventTimes = sessionEventTimes.TrialEventTimesDB;
+    fprintf('Done getSessionEventTimes()\n')
 end
 
 function [trRem] = getTrialNosToRemove(crossPair)
@@ -224,6 +263,7 @@ function [trRem] = getTrialNosToRemove(crossPair)
         end
         trRem = unique(temp(:));
     end
+    %fprintf('Done getTrialNosToRemove()\n')
 end
 
 function [trialNos4SatConds,nTrials4SatConds] = getTrialNosForAllSatConds(trialTypes,trRem,conditions)
@@ -249,7 +289,7 @@ function [trialNos4SatConds,nTrials4SatConds] = getTrialNosForAllSatConds(trialT
        condition = conditions{c};
        nTrials4SatConds.(condition) = numel(trialNos4SatConds.(condition));
    end   
-   
+   %fprintf('Done getTrialNosForAllSatConds()\n')   
 end
 
 function [colNames] = getPairColNmes()
