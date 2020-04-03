@@ -9,4 +9,9 @@ addpath('./satSef/stats');
 addpath('./satSef/toolbox');
 % add toolbox/utils
 addpath('./satSef/toolbox/utils');
-% 
+% add rscDBAllEpochs
+addpath('./satSef/rscDBAllEpochs');
+% add rscControlNTrials
+addpath('./satSef/rscControlNTrials');
+
+
