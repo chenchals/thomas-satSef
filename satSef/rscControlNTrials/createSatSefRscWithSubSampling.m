@@ -1,4 +1,4 @@
-function [spkCorr] = createSatSefRscWithTrialControl()
+function [spkCorr] = createSatSefRscWithSubSampling()
 % Create spike count correlation data set 
 % for pairs of units recorded from same session for cross areas.
 % FOR-each-session in sessions DO --> cant do because for some units in the
@@ -63,15 +63,15 @@ function [spkCorr] = createSatSefRscWithTrialControl()
 
 %% File refs for data to computing Rsc
     warning('off');
-    monkIdsToDo = {'D','E'};
     %Options for Spk Corr computation
-    rootAnalysisDir = 'dataProcessed/satSefPaper/analysis/spkCorr';
     datasetDir = 'dataProcessed/satSefPaper/dataset';
     % Files for getting data to compute Rsc
     pairsFile = fullfile(datasetDir,'SAT_SEF_PAIR_CellInfoDB.mat');
     trialTypesFile = fullfile(datasetDir,'SAT_SEF_TrialTypesDB.mat');
     trialEventTimesFile = fullfile(datasetDir,'SAT_SEF_TrialEventTimesDB.mat');
     spikeTimesFile = fullfile(datasetDir,'spikes_SAT.mat');
+    % output file
+    outFile = 'newRscWithSubSampling.mat';
 
     % alignment
     % Setup time windows for different event time alignment, the field names
@@ -79,7 +79,7 @@ function [spkCorr] = createSatSefRscWithTrialControl()
     alignNames = {'PostSaccade'};
     alignEvents = {'SaccadePrimary'};
     alignTimeWin = {[-100 500]};
-    firstSortEvent = {'SaccadePrimary'};
+
     conditions = {'AccurateCorrect';'AccurateErrorChoice';'AccurateErrorTiming';
         'FastCorrect';    'FastErrorChoice';    'FastErrorTiming'
         };
@@ -112,7 +112,7 @@ function [spkCorr] = createSatSefRscWithTrialControl()
         opts = struct();
         crossPair = crossPairs(cp,:);
         sess = crossPair.X_sess{1};
-        trialTypes = sessionTrialTypes(ismember(sessionTrialTypes.session,sess),:);
+        trialTypes = sessionTrialTypes(ismember(sessionTrialTypes.session,sess),:); %#ok<*PFBNS>
         trRem = getTrialNosToRemove(crossPair);
         [trialNos4SatConds, nTrials4SatConds] = ...
             getTrialNosForAllSatConds(trialTypes,trRem,conditions);
@@ -204,7 +204,7 @@ function [spkCorr] = createSatSefRscWithTrialControl()
         fprintf('Done pair %d of %d\n',cp,nCrossPairs)
     end
 toc
-save('newRscWithTrialControl.mat','-v7.3','spkCorr');
+save(outFile,'-v7.3','spkCorr');
 end
 
 function [rhoEst,rhoEstSem,percentileCI,normalCI] = getEstimatedRhoAndConfInterval(xSpkCounts,ySpkCounts,nTrials4SubSample,nSubSamples)
@@ -259,7 +259,7 @@ function [trRem] = getTrialNosToRemove(crossPair)
     if ~isempty(trRem)
         temp = [];
         for ii = 1:size(trRem,1)
-            temp = [temp [trRem(ii,1):trRem(ii,2)]]; %#ok<AGROW>
+            temp = [temp [trRem(ii,1):trRem(ii,2)]]; %#ok<NBRAK,AGROW>
         end
         trRem = unique(temp(:));
     end
