@@ -71,7 +71,7 @@ function [spkCorr] = createSatSefRscWithSubSamplingV2()
     trialEventTimesFile = fullfile(datasetDir,'SAT_SEF_TrialEventTimesDB.mat');
     spikeTimesFile = fullfile(datasetDir,'spikes_SAT.mat');
     % output file
-    outFile = 'newRscWithSubSampling.mat';
+    outFile = 'newRscWithConstantSubSampling.mat';
 
     % alignment
     % Setup time windows for different event time alignment, the field names
@@ -155,15 +155,44 @@ function [spkCorr] = createSatSefRscWithSubSamplingV2()
                     {rasterBins},{YRasters},{staticWin},'UniformOutput',false);
                 yMeanFrWin = mean(ySpkCounts{1})*1000/range(staticWin);
                 [rho_pval] = getSpikeCountCorr(xSpkCounts{1},ySpkCounts{1},'Pearson');
-                % Do sub-sampling to estimate Rho and CI
-                % nTrials2SubSample, selTrials
-                [rhoEst,rhoEstSem,percentileCI,normalCI] = ...
+                %% Do sub-sampling to estimate Rho and CI
+                % nTrials4SubSample, selTrials
+                [rhoEst,rhoEstSem,prctile_10_90,ci95] = ...
                      getEstimatedRhoAndConfInterval(xSpkCounts{1},...
                                                     ySpkCounts{1},...
                                                     nTrials4SubSample,...
-                                                    nSubSamples);
+                                                    nSubSamples,[10 90]);
+                %%
+                % rscDataStats =
+                % 
+                %   6×7 table
+                % 
+                %     satCondition       outcome       GroupCount    mean_absRho    sem_absRho    mean_nTrials    sem_nTrials
+                %     ____________    _____________    __________    ___________    __________    ____________    ___________
+                % 
+                %      'Accurate'     'Correct'           258         0.082981      0.0042224        469.67         6.2587   
+                %      'Fast'         'Correct'           258         0.082178      0.0046837        409.88         5.9226   
+                %      'Accurate'     'ErrorChoice'       258           0.1174      0.0054808        79.558         2.1948   
+                %      'Fast'         'ErrorChoice'       258          0.12106      0.0068834        169.77         3.1139   
+                %      'Accurate'     'ErrorTiming'       258          0.10216      0.0054097        153.83         2.8459   
+                %      'Fast'         'ErrorTiming'       258           0.1621      0.0082477        37.279         1.0289   
 
-                % output table/struct
+                %% Since mean-trial-count for Fast-ErrorTiming ~ 40 (37.29)
+                nTrials40SubSample = 40;
+                [rhoEst40,rhoEstSem40,prctile_10_90_nTrials_40,ci95_nTrials_40] = ...
+                     getEstimatedRhoAndConfInterval(xSpkCounts{1},...
+                                                    ySpkCounts{1},...
+                                                    nTrials40SubSample,...
+                                                    nSubSamples,[10 90]);
+                %% Since mean-trial-count for Accurate-ErrorChoice ~ 80 (79.56)
+                nTrials80SubSample = 80;
+                [rhoEst80,rhoEstSem80,prctile_10_90_nTrials_80,ci95_nTrials_80] = ...
+                     getEstimatedRhoAndConfInterval(xSpkCounts{1},...
+                                                    ySpkCounts{1},...
+                                                    nTrials80SubSample,...
+                                                    nSubSamples,[10 90]);
+
+                %% output table/struct
                 % add crosspair info
                 cN = getPairColNmes();
                 cpTemp = table2struct(crossPair,'ToScalar',true);
@@ -183,19 +212,34 @@ function [spkCorr] = createSatSefRscWithSubSamplingV2()
                 opts(evId,sc).(['xMeanFr_spkPerSec_win' fieldSuffix]) = xMeanFrWin;
                 opts(evId,sc).(['yMeanFr_spkPerSec_win' fieldSuffix]) = yMeanFrWin;
 
-                opts(evId,sc).(['rho_pval_win' fieldSuffix]) = {staticWin};                    
-                opts(evId,sc).(['rhoRaw' fieldSuffix]) = rho_pval(1);
-                opts(evId,sc).(['pvalRaw' fieldSuffix]) = rho_pval(2);
-                opts(evId,sc).(['signifRaw_05' fieldSuffix]) = rho_pval(2) < 0.05;  
+                opts(evId,sc).rho_pval_win = {staticWin};                    
+                opts(evId,sc).rhoRaw = rho_pval(1);
+                opts(evId,sc).pvalRaw = rho_pval(2);
+                opts(evId,sc).signifRaw_05 = rho_pval(2) < 0.05;  
 
                 opts(evId,sc).nTrials4SubSample = nTrials4SubSample;
                 opts(evId,sc).nSubSamples = nSubSamples;
-                opts(evId,sc).(['rhoEstRaw' fieldSuffix]) = rhoEst;
-                opts(evId,sc).(['rhoEstSem' fieldSuffix]) = rhoEstSem;
-                opts(evId,sc).(['normalCI95' fieldSuffix]) = {normalCI};
-                opts(evId,sc).(['percentileCI95' fieldSuffix]) = {percentileCI};
-                opts(evId,sc).rhoRawWithinNormalCI = normalCI(1) < rho_pval(1) & rho_pval(1) < normalCI(2);
-                opts(evId,sc).rhoRawWithinPercentileCI = percentileCI(1) < rho_pval(1) & rho_pval(1) < percentileCI(2);               
+                opts(evId,sc).rhoEstRaw = rhoEst;
+                opts(evId,sc).rhoEstSem = rhoEstSem;
+                opts(evId,sc).ci95 = {ci95};
+                opts(evId,sc).prctile_10_90 = {prctile_10_90};
+                opts(evId,sc).rhoRawInCi95 = ci95(1) < rho_pval(1) & rho_pval(1) < ci95(2);
+                opts(evId,sc).rhoRawInPrctile_10_90 = prctile_10_90(1) < rho_pval(1) & rho_pval(1) < prctile_10_90(2);               
+
+                opts(evId,sc).rhoEstRaw_nTrials_40 = rhoEst40;
+                opts(evId,sc).rhoEstSem_nTrials_40 = rhoEstSem40;
+                opts(evId,sc).ci95_nTrials_40 = {ci95_nTrials_40};
+                opts(evId,sc).prctile_10_90_nTrials_40 = {prctile_10_90_nTrials_40};
+                opts(evId,sc).rhoRawInCi95_nTrials_40 = ci95_nTrials_40(1) < rho_pval(1) & rho_pval(1) < ci95_nTrials_40(2);
+                opts(evId,sc).rhoRawInPrctile_10_90_nTrials_40 = prctile_10_90_nTrials_40(1) < rho_pval(1) & rho_pval(1) < prctile_10_90_nTrials_40(2);               
+
+                opts(evId,sc).rhoEstRaw_nTrials_80 = rhoEst80;
+                opts(evId,sc).rhoEstSem_nTrials_80 = rhoEstSem80;
+                opts(evId,sc).ci95_nTrials_80 = {ci95_nTrials_80};
+                opts(evId,sc).prctile_10_90_nTrials_80 = {prctile_10_90_nTrials_80};
+                opts(evId,sc).rhoRawInCi95_nTrials_80 = ci95_nTrials_80(1) < rho_pval(1) & rho_pval(1) < ci95_nTrials_80(2);
+                opts(evId,sc).rhoRawInPrctile_10_90_nTrials_80 = prctile_10_90_nTrials_80(1) < rho_pval(1) & rho_pval(1) < prctile_10_90_nTrials_80(2);               
+
                 
             end % for aligned event
             %spkCorr = [spkCorr; [crossPair(1,getPairColNmes) struct2table(opts,'AsArray',true)]];
@@ -207,7 +251,7 @@ toc
 save(outFile,'-v7.3','spkCorr');
 end
 
-function [rhoEst,rhoEstSem,percentileCI,normalCI] = getEstimatedRhoAndConfInterval(xSpkCounts,ySpkCounts,nTrials4SubSample,nSubSamples)
+function [rhoEst,rhoEstSem,percentileCI,normalCI] = getEstimatedRhoAndConfInterval(xSpkCounts,ySpkCounts,nTrials4SubSample,nSubSamples, prctileRange)
     % inline fx for subsampling see DATASAMPLE
     subSampleIdxs = arrayfun(@(x) datasample(1:numel(xSpkCounts),nTrials4SubSample,'Replace',true)',(1:nSubSamples),'UniformOutput',false);
     temp = cellfun(@(x) getSpikeCountCorr(xSpkCounts(x),ySpkCounts(x),'Pearson'),subSampleIdxs','UniformOutput',false);
@@ -219,7 +263,7 @@ function [rhoEst,rhoEstSem,percentileCI,normalCI] = getEstimatedRhoAndConfInterv
     % compute t-statistic for 0.025, 0.975
     ts = tinv([0.025,0.975],nTrials4SubSample-1);
     normalCI = rhoEst + rhoEstSem*ts;
-    percentileCI =  prctile(rhoVec,[2.5, 97.5]);
+    percentileCI =  prctile(rhoVec,prctileRange);
 end
 
 

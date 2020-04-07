@@ -1,5 +1,5 @@
 %%
-spkCorr = load('newRscWithTrialControl.mat');
+spkCorr = load('newRscWithSubSampling.mat');
 spkCorr = spkCorr.spkCorr;
 
 rscData = spkCorr(:,{'condition','rhoRaw_150ms',...
