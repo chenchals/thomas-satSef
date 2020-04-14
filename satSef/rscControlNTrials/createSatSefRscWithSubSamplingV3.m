@@ -110,11 +110,10 @@ function [spkCorr] = createSatSefRscWithSubSamplingV3()
     spkCorr = table();
     pctRunOnAll warning off;
     %parfor (cp = 1:nCrossPairs,nThreads)%nCrossPairs
-    %parfor (cp = 1:nCrossPairs,nThreads)%nCrossPairs
-    for (cp = 1:nCrossPairs)%nCrossPairs
+    parfor (cp = 1:nCrossPairs,nThreads)%nCrossPairs
+    %for (cp = 1:nCrossPairs)%nCrossPairs
         %%
         fprintf('doing pair %d\n',cp)
-        opts = struct();
         crossPair = crossPairs(cp,:);
         sess = crossPair.X_sess{1};
         trialTypes = sessionTrialTypes(ismember(sessionTrialTypes.session,sess),:); %#ok<*PFBNS>
@@ -130,6 +129,8 @@ function [spkCorr] = createSatSefRscWithSubSamplingV3()
         xSpkTimes = spikesSat{crossPair.X_unitNum}';
         ySpkTimes = spikesSat{crossPair.Y_unitNum}';
         evntTimes = sessionEventTimes(ismember(sessionEventTimes.session,sess),:);
+        
+        opts = struct();
         for sc = 1:numel(conditions)
             condition = conditions{sc};
             selTrials = trialNos4SatConds.(condition);
@@ -230,12 +231,19 @@ function [spkCorr] = createSatSefRscWithSubSamplingV3()
                 opts(evId,sc).rhoRawInCi95_nTrials_80 = ci95_nTrials_80(1) < rho_pval(1) & rho_pval(1) < ci95_nTrials_80(2);
                 opts(evId,sc).rhoRawInPrctile_10_90_nTrials_80 = prctile_10_90_nTrials_80(1) < rho_pval(1) & rho_pval(1) < prctile_10_90_nTrials_80(2);               
 
-                
+             
             end % for aligned event
             %spkCorr = [spkCorr; [crossPair(1,getPairColNmes) struct2table(opts,'AsArray',true)]];
         end % for condition
-        spkCorr = [spkCorr;struct2table(opts)];
+        try
+        opts = opts(:);
+        for jj=1:numel(opts)
+            spkCorr = [spkCorr; struct2table(opts(jj),'AsArray',true)]; 
+        end
         fprintf('Done pair %d of %d\n',cp,nCrossPairs)
+        catch me
+            me
+        end
     end
 toc
 save(outFile,'-v7.3','spkCorr');
