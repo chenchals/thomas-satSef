@@ -9,6 +9,8 @@ spkCorr.Properties.VariableNames = regexprep(colNames,'_150ms','');
 conditions = {'AccurateCorrect';'AccurateErrorChoice';'AccurateErrorTiming';
               'FastCorrect';    'FastErrorChoice';    'FastErrorTiming'
     };
+spkCorr.satCondition = regexprep(spkCorr.condition,{'Correct','Error.*'},{'',''});
+spkCorr.outcome = regexprep(spkCorr.condition,{'Fast','Accurate'},{'',''});
 
 rscData = table();
 rscData.condition = spkCorr.condition;
@@ -20,15 +22,35 @@ rscData.rhoEst80 = spkCorr.rhoEstRaw_nTrials_80;
 rscData.absRho = abs(spkCorr.rhoRaw);
 rscData.absRhoEst40 = abs(spkCorr.rhoEstRaw_nTrials_40);
 rscData.absRhoEst80 = abs(spkCorr.rhoEstRaw_nTrials_80);
+% add isSefErrorNeuron
+%rscData.isSefErrorUnit = abs(spkCorr.X_errGrade) > 1 & abs(spkCorr.X_rewGrade) > 1;
+
+rscData.isSefErrorUnit = abs(spkCorr.X_errGrade) > 1 | abs(spkCorr.X_rewGrade) > 1;
 
 %% Get statistics for the specific rho values
 groupCols = {'condition','satCondition','outcome'};
 rhocols = {'absRho','absRhoEst40','absRhoEst80'};
 
-rscSatConditionStats = grpstats(rscData(:,['satCondition', rhocols]),'satCondition',{'mean','std','sem'});
+%useNeurons = 'ALL'; 
+%useNeurons = 'NON-ERROR';
+useNeurons = 'ERROR';
+
+if strcmp(useNeurons,'ALL')
+    idxRos = true(size(rscData,1),1);
+    titleStr = 'All SEF neuron pairs';
+elseif strcmp(useNeurons,'ERROR')
+    idxRos = rscData.isSefErrorUnit == 1;
+    titleStr = 'All SEF error-neuron pairs';
+elseif strcmp(useNeurons,'NON-ERROR')
+    idxRos = rscData.isSefErrorUnit == 0;
+    titleStr = 'All SEF non-error-neuron pairs';
+end
+
+rscSatConditionStats = grpstats(rscData(idxRos,['satCondition', rhocols]),'satCondition',{'mean','std','sem'});
+
 rscSatConditionStats.Properties.RowNames = {};
 
-rscOutcomesStats = grpstats(rscData(:,[groupCols rhocols]),groupCols,{'mean','std','sem'});
+rscOutcomesStats = grpstats(rscData(idxRos,[groupCols rhocols]),groupCols,{'mean','std','sem'});
 rscOutcomesStats = sortrows(rscOutcomesStats,{'outcome','satCondition'});
 rscOutcomesStats.Properties.RowNames = {};
 % display 3 groups of 2 bars each
@@ -41,10 +63,14 @@ grpColors = {accClr;fasClr};
 
 outcomes = {'Correct','ErrorChoice','ErrorTiming'}';
 sat = {'Accurate','Fast'};
-idx = ismember(rscOutcomesStats.satCondition,'Accurate');
-accuTbl = rscOutcomesStats(idx,{'outcome','mean_absRho','sem_absRho'});
-idx = ismember(rscOutcomesStats.satCondition,'Fast');
-fastTbl = rscOutcomesStats(idx,{'outcome','mean_absRho','sem_absRho'});
+idxAccu = ismember(rscOutcomesStats.satCondition,'Accurate');
+idxFast = ismember(rscOutcomesStats.satCondition,'Fast');
+
+accuTbl = rscOutcomesStats(idxAccu,{'outcome','mean_absRho','sem_absRho'});
+fastTbl = rscOutcomesStats(idxFast,{'outcome','mean_absRho','sem_absRho'});
+
+
+
 figure
 [barCentersTbl, errBarHandles] = plotGroupedBarsWithErrs(accuTbl.outcome,...
     [accuTbl.mean_absRho fastTbl.mean_absRho],...
@@ -64,9 +90,9 @@ overplotBox(barCenter,ci,'k','-');
 idx = ismember(rscData.condition,'FastErrorChoice');
 barCenter = barCentersTbl.ErrorChoice(2);
 ci = getCi(abs(rscData.rhoEst80(idx)));
-%overplotBox(barCenter,ci,'k',':');
+overplotBox(barCenter,ci,'k',':');
 %ptile = prctile(abs(rscData.rhoEst80(idx)),[10 90]);
-overplotBox(barCenter,ptile,'k',':');
+%overplotBox(barCenter,ptile,'k',':');
 
 % Accurate_Correct percentile 10/90 for 80 subsamples
 idx = ismember(rscData.condition,'AccurateCorrect');
@@ -83,10 +109,13 @@ ci40 = getCi(abs(rscData.rhoEst40(idx)));
 overplotBox(barCenter,ci40,'k','-');
 ci80 = getCi(abs(rscData.rhoEst80(idx)));
 overplotBox(barCenter,ci80,'k',':');
-ppretty([3.5,3])
+%ppretty([3.5,3])
+ppretty([3,6])
+title(titleStr)
 %% DO 2-Factor ANOVA satCondition by outcome
-temp = rscData;
-temp.epoch = repmat({'PostSaccade'},size(rscData,1),1);
+figure
+temp = rscData(idxRos,:);
+temp.epoch = repmat({'PostSaccade'},size(temp,1),1);
 [anovRes] = doAnovaConditionByOutcome(temp,'absRho');
 
 anovaTbl = anovRes.PostSaccade.anovaTbl
@@ -157,6 +186,12 @@ end
 %%
 function [colNames] = getColNamesToUse()
 colNames = {
+    'X_unit'
+    'Y_unit'
+    'X_area'
+    'Y_area'
+    'X_errGrade'
+    'X_rewGrade'
     'xSpkCount_win_150ms'
     'ySpkCount_win_150ms'
     'xMeanFr_spkPerSec_win_150ms'
