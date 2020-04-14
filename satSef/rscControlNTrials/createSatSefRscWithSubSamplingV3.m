@@ -71,7 +71,7 @@ function [spkCorr] = createSatSefRscWithSubSamplingV3()
     trialEventTimesFile = fullfile(datasetDir,'SAT_SEF_TrialEventTimesDB.mat');
     spikeTimesFile = fullfile(datasetDir,'spikes_SAT.mat');
     % output file
-    outFile = 'newRscWithConstantSubSampling.mat';
+    outFile = 'newRscSubSampling1K_AllEpochs.mat';
 
     % alignment
     % Setup time windows for different event time alignment, the field names
@@ -110,8 +110,10 @@ function [spkCorr] = createSatSefRscWithSubSamplingV3()
     spkCorr = table();
     pctRunOnAll warning off;
     %parfor (cp = 1:nCrossPairs,nThreads)%nCrossPairs
-    parfor (cp = 1:nCrossPairs,nThreads)%nCrossPairs
+    %parfor (cp = 1:nCrossPairs,nThreads)%nCrossPairs
+    for (cp = 1:nCrossPairs)%nCrossPairs
         %%
+        fprintf('doing pair %d\n',cp)
         opts = struct();
         crossPair = crossPairs(cp,:);
         sess = crossPair.X_sess{1};
