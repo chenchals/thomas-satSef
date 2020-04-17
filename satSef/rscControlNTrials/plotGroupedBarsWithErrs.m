@@ -12,7 +12,11 @@ function [barCentersTbl, errBarHandles] = plotGroupedBarsWithErrs(cellArrCategor
     % find minRho for negative Rho 
     % manually was [-0.2 0.45]
     yLims = [0 0.18];
-
+    
+    temp = yMean(:);
+    if max(temp) > max(yLims)
+        yLims = [0 0.26]; % manually checked...
+    end
     
     %x = categorical(xData(:,1));
     x = 1:numel(cellArrCategories);
