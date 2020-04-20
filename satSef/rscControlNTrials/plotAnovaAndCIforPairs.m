@@ -1,5 +1,5 @@
 %%
-spkCorr = load('newRscSubSampling1K_AllEpochs.mat');
+spkCorr = load('dataProcessed/satSefPaper/newRscSubSampling1K_AllEpochs.mat');
 spkCorr = spkCorr.spkCorr;
 
 colNames = getColNamesToUse();
