@@ -1,4 +1,5 @@
-function [anovaResults] = satAnova(valsGroupsTbl,anovaModelName,doMultCompareFlag,alpha)
+%function [anovaResults] = satAnova(valsGroupsTbl,anovaModelName,doMultCompareFlag,alpha)
+function [anovaResults] = satAnova(valsGroupsTbl,varargin)
 %SATANOVA Do a multiway anova for the given table of inputs
 %   Column1 = Y-Values numeric
 %   Columns (2 to end) = groups/factors over which the anonan is run
@@ -6,11 +7,21 @@ function [anovaResults] = satAnova(valsGroupsTbl,anovaModelName,doMultCompareFla
 % ***Note: dont use "factor" *** --> Its is a matlab funtion for primes  doc FACTOR
 % see also ANOVAN, MULTCOMPARE
 
-%anoveModelName = 'linear'; %'interaction'
-%doMultCompareFlag = true;
+argsParser = inputParser();
+argsParser.addParameter('model','full'); %linear|interaction|full
+%argsParser.addParameter('display','off');%off|on --> for anova tbl
+argsParser.addParameter('alpha',0.05);
+argsParser.addParameter('sstype',3);%1|2|3|'h' default = 3
+argsParser.addParameter('doMultiCompare',true);
+% ctype: The type of critical value to use.  Choices are
+%       'tukey-kramer' (default), 'dunn-sidak', 'bonferroni', 'scheffe'.
+%       Enter two or more choices separated by spaces, to use the minimum
+%       of those critical values. see MULTCOMPARE
+argsParser.addParameter('ctype','tukey-kramer');
+argsParser.addParameter('multiCompareDisplay','off');%off|on --> for multiple comparisons show graph
 
-useBonferroni = false;
-anovaDisplay = 'off'; %'on'
+argsParser.parse(varargin{:});
+args = argsParser.Results;
 
 yVals = valsGroupsTbl{:,1};
 assert(isnumeric(yVals),'Y-Values must be numeric');
@@ -28,7 +39,7 @@ end
 anovaResults = struct();
 anovaTblVarNames = {'Source', 'SumSq' 'df' 'IsSingular' 'MeanSq' 'F'  'ProbGtF'};
 
-[~,temp,anovaStats] = anovan(yVals,groups,'model',anovaModelName,'varnames',groupNames, 'display',anovaDisplay);
+[~,temp,anovaStats] = anovan(yVals,groups,'model',args.model,'varnames',groupNames, 'display','off');
 anovaTbl = cell2table(temp(2:end,:),'VariableNames',anovaTblVarNames);
 % add '*' p(F >= .05) and '**' p(F >=  .01)
 idx = find(~ismember(anovaTbl.Source,{'Error','Total'}));
@@ -45,16 +56,9 @@ end
 anovaResults.anovaTbl = anovaTbl;
 % Compare results for different LEVELS *WITHIN* each group/Factor independently 
 % for bonferroni use 'CType', ... see doc multcompare
-% 'CType' ? Type of critical value
-% 'tukey-kramer' (default) | 'hsd' | 'lsd' | 'bonferroni' | 'dunn-sidak' | 'scheffe'
-cType = 'tukey-kramer';
-if useBonferroni
-    cType = 'bonferroni';
-end
-
-if (doMultCompareFlag)
+if (args.doMultiCompare)
     for gr = 1:numel(groupNames)
-        [temp,~,~,grpNames] = multcompare(anovaStats,'Dimension',gr,'Alpha',alpha,'CType',cType);
+        [temp,~,~,grpNames] = multcompare(anovaStats,'Dimension',gr,'Alpha',args.alpha,'CType',args.ctype,'display',args.multiCompareDisplay);
         anovaResults.(groupNames{gr}) = annotateMultcompareResults(temp,grpNames);
     end
     
@@ -65,7 +69,7 @@ if (doMultCompareFlag)
     for jj = 1:size(n2GrpComparisions,1)
         idx = n2GrpComparisions(jj,:);
         fn = char(join(groupNames(idx),'_'));
-        [temp,~,~,grpNames] = multcompare(anovaStats,'Dimension',idx,'Alpha',alpha,'CType',cType);
+        [temp,~,~,grpNames] = multcompare(anovaStats,'Dimension',idx,'Alpha',args.alpha,'CType',args.ctype,'display',args.multiCompareDisplay);
         anovaResults.(fn) = annotateMultcompareResults(temp,grpNames);
     end
 end
@@ -78,7 +82,7 @@ if numel(groupNames) > 2
     for jj = 1:size(n3GrpComparisions,1)
         idx = n3GrpComparisions(jj,:);
         fn = char(join(groupNames(idx),'_'));
-        [temp,~,~,grpNames] = multcompare(anovaStats,'Dimension',idx,'Alpha',alpha);
+        [temp,~,~,grpNames] = multcompare(anovaStats,'Dimension',idx,'Alpha',args.alpha);
         anovaResults.(fn) = annotateMultcompareResults(temp,grpNames);
     end
 end

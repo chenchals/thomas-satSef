@@ -13,8 +13,19 @@ function [] = ppretty(image_size, varargin)
 %     2) `square': A flag that resizes the paper to make it a 10x10 square.
 %     3) `cut': A flag that says whether shading should be cut at the edge
 %     of the figure
-%
-args = getopt(varargin, {'yRight',{'font=',8}, {'margin=', 0.5}});
+% Modification:
+%   21/04/2020 - removed getopt and using inputParser to parse argument
+%                list
+                     
+argParser = inputParser();
+argParser.addParameter('yRight',false);
+argParser.addParameter('font',8);
+argParser.addParameter('margin',0.5);
+argParser.addParameter('XMinorTick','on');
+argParser.addParameter('YMinorTick','on');
+argParser.parse(varargin{:});
+args = argParser.Results;
+
 
 % Default values
 set(gcf, 'DefaultTextFontSize', args.font); % [pt]
@@ -51,13 +62,13 @@ for i = 1:length(all_axes)
     set(curr_axis, 'Box', 'off');
     set(curr_axis, 'TickDir', 'out');
     set(curr_axis, 'TickLength', [0.02 0.02]);
-    set(curr_axis, 'XMinorTick', 'on');
-    set(curr_axis, 'YMinorTick', 'on');
-%     set(curr_axis, 'XColor', [0 0 0]);
-%     set(curr_axis, 'YColor', [0 0 0]);
+    set(curr_axis, 'XMinorTick', args.XMinorTick);
+    set(curr_axis, 'YMinorTick', args.YMinorTick);
     set(curr_axis, 'LineWidth', 0.75);
     if (args.yRight)
       set(curr_axis, 'YAxisLocation','right')
+    else
+      set(curr_axis, 'YAxisLocation','left')        
     end
 end
 

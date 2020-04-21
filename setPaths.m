@@ -13,5 +13,7 @@ addpath('./satSef/toolbox/utils');
 addpath('./satSef/rscDBAllEpochs');
 % add rscControlNTrials
 addpath('./satSef/rscControlNTrials');
+%% Add figure directories to path
+addpath(genpath('./satSef/figures'))
 
 
