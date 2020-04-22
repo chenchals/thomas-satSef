@@ -39,6 +39,7 @@ rscPostSaccade.absRhoEst80 = abs(spkCorr.rhoEstRaw_nTrials_80);
 rscPostSaccade.isSefErrorUnit = abs(spkCorr.X_errGrade) > 1 | abs(spkCorr.X_rewGrade) > 1;
 
 %% RSC by Unit Type
+warning('off')
 unitTypes = {'ALL_NEURONS','ERROR_NEURONS','OTHER_NEURONS'};
 fig08RscUnitType(rscPostSaccade,unitTypes);
 
