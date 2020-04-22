@@ -39,7 +39,7 @@ idxEpoch = ismember(rscDataAllEpochs.epoch, epoch);
 groupCols = {'condition','satCondition','outcome'};
 rhocols = {'absRho','absRhoEst40','absRhoEst80'};
 monkeys = {'D','E','D & E'};
-useNeuronTypes = {'ALL'}; %,'NON-ERROR','ERROR'};
+useNeuronTypes = {'ALL','NON-ERROR','ERROR'};
 for m = 1:numel(monkeys)   
     % monkey
     monkey = monkeys{m};

@@ -102,7 +102,7 @@ resultsAsTbl.levelName2 = arrayfun(@(x) levelNamesNew{x},results(:,2),'UniformOu
 resultsAsTbl = [resultsAsTbl array2table(results(:,3:end),'VariableNames',{'loCI95','meanDiff','hiCI95','pval_H0'})];
 resultsAsTbl.isSignif05 = results(:,end)<=0.05;
 resultsAsTbl.isSignif01 = results(:,end)<=0.01;
-resultsAsTbl.signifStr=repmat({''},size(resultsAsTbl,1),1);
+resultsAsTbl.signifStr = repmat({'N.S.'},size(resultsAsTbl,1),1);
 resultsAsTbl.signifStr(resultsAsTbl.isSignif05) = repmat({'*'},sum(resultsAsTbl.isSignif05),1);
 resultsAsTbl.signifStr(resultsAsTbl.isSignif01) = repmat({'**'},sum(resultsAsTbl.isSignif01),1);
 resultsAsTbl.group1 = results(:,1);

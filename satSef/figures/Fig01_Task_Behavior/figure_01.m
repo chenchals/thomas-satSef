@@ -1,4 +1,4 @@
-function [] = figure1()
+function [] = figure_01()
 %FIGURE1 Plot Fig1b,Fig1c
 % needs Behavior data
 % see also FIG01B_PLOT_ERRRATE_X_RT, 
