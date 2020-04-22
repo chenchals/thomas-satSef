@@ -44,7 +44,7 @@ anovaTbl = cell2table(temp(2:end,:),'VariableNames',anovaTblVarNames);
 % add '*' p(F >= .05) and '**' p(F >=  .01)
 idx = find(~ismember(anovaTbl.Source,{'Error','Total'}));
 for jj = 1:numel(idx)
-    str = '';
+    str = 'N.S.';
     probGtF = anovaTbl.ProbGtF{jj};
     if probGtF <= 0.01
         str = '**';

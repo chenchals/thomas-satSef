@@ -1,12 +1,25 @@
-function [] = figure08_RscByUnitType(rscData, useNeuronTypes)
-%FIGURE08_RSCBYUNITTYPE Summary of this function goes here
+function [anovaResultTbl] = fig08RscUnitType(rscData, useNeuronTypes)
+%FIG08RSCUNITTYPE Summary of this function goes here
 monkey = 'Da_Eu';
 groupCols = {'condition','satCondition','outcome'};
 rhocols = {'absRho','absRhoEst40','absRhoEst80'};
 
 oPdfFile = 'figure08_RscByUnitType.pdf';
 oExcelFile = 'figure08_RscByUnitType.xlsx';
+oMatFile = 'figure08_RscByUnitType.mat';
+oFiles = {oPdfFile,oExcelFile,oMatFile};
+for oF = oFiles
+    if exist(oF{1},'file')
+        delete(oF{1});
+    end
+end
 
+fx_ANOVA2_roi = @(levelName1,levelName2,oCome) find(...
+    ismember(levelName1,['Accurate_' oCome])...
+    & ismember(levelName2,['Fast_' oCome])...
+    );
+anovaResultTbl = struct();
+anovaTxt = {};
 figure
 for un = 1:numel(useNeuronTypes)
     useNeuronType = useNeuronTypes{un};    
@@ -26,12 +39,36 @@ for un = 1:numel(useNeuronTypes)
     rscOutcomesStats = grpstats(rscData(idxRos,[groupCols rhocols]),groupCols,{'mean','std','sem'});
     rscOutcomesStats = sortrows(rscOutcomesStats,{'outcome','satCondition'});
     rscOutcomesStats.Properties.RowNames = {};
-    % display 3 groups of 2 bars each
-    % data = [1 2;3 4;5 6]
-    % quick:
-    accClr = [1 0.2 0.2];
-    fasClr = [0.2 1.0 0.2];
+   
+        %% DO 2-way ANOVA
+    anovRes = satAnova(rscData(:,{'absRho','satCondition','outcome'}),'model','interaction',...
+        'doMultiCompare',true,...
+        'multiCompareDisplay','off',...
+        'alpha',0.05);
+    anovaTbl = anovRes.anovaTbl;
+    satConditionByOutcome = sortrows(anovRes.satCondition_outcome(:,[1:6 9]),...
+        {'levelName1','levelName2'},{'ascend','descend'});
+    % get row nos for comparisions of interest
+    roIds = cell2mat(cellfun(@(o) fx_ANOVA2_roi(satConditionByOutcome.levelName1,satConditionByOutcome.levelName2,o),...
+             unique(rscData.outcome),'UniformOutput',false));
+    roIdsOther = setdiff([1:size(satConditionByOutcome,1)]',roIds);
+    signifStrs = satConditionByOutcome.signifStr(roIds);
+
+    satConditionByOutcome = [satConditionByOutcome(roIds,:);satConditionByOutcome(roIdsOther,:)];    
+    outcomeStats = rscOutcomesStats(:,[1,4,5,6,7,8,9,11,12]);
+    satStats = rscSatConditionStats(:,[1,2,3,4,5,6,7,9,10]);
+    satStats.Properties.VariableNames = outcomeStats.Properties.VariableNames;
+    allStats = [satStats;outcomeStats];
+    % write output to excel file
+    sheetName_prefix = [monkey useNeuronType];
+    writetable(anovaTbl,oExcelFile,'UseExcel',true,'Sheet',[sheetName_prefix '_anova']);
+    writetable(satConditionByOutcome,oExcelFile,'UseExcel',true,'Sheet',[sheetName_prefix '_Interaction']);
+    writetable(allStats,oExcelFile,'UseExcel',true,'Sheet',[sheetName_prefix '_Stats']);
     
+    %% Plot results/means
+    % display 3 groups of 2 bars each
+    accClr = [1 0.2 0.2];
+    fasClr = [0.2 1.0 0.2];    
     grpColors = {accClr;fasClr};
     
     %         outcomes = {'Correct','ErrorChoice','ErrorTiming'}';
@@ -40,14 +77,20 @@ for un = 1:numel(useNeuronTypes)
     idxFast = ismember(rscOutcomesStats.satCondition,'Fast');
     
     accuTbl = rscOutcomesStats(idxAccu,{'outcome','mean_absRho','sem_absRho'});
-    fastTbl = rscOutcomesStats(idxFast,{'outcome','mean_absRho','sem_absRho'});
-    
+    fastTbl = rscOutcomesStats(idxFast,{'outcome','mean_absRho','sem_absRho'});    
     
     subplot(1,numel(useNeuronTypes),un);
     
-    [barCentersTbl, ~] = plotGroupBarsWithErrors(accuTbl.outcome,...
+    outcomeLabels = accuTbl.outcome;
+    roIds = cell2mat(cellfun(@(o) fx_ANOVA2_roi(satConditionByOutcome.levelName1,satConditionByOutcome.levelName2,o),...
+             outcomeLabels,'UniformOutput',false));
+    signifStrs = satConditionByOutcome.signifStr(roIds);
+
+    
+    [barCentersTbl, ~] = plotGroupBarsWithErrors(outcomeLabels,...
         [accuTbl.mean_absRho fastTbl.mean_absRho],...
         [accuTbl.sem_absRho fastTbl.sem_absRho],...
+        signifStrs,...
         grpColors);
     
     % Add boxes for Confidence interval
@@ -81,34 +124,21 @@ for un = 1:numel(useNeuronTypes)
     title(titleStr,'FontWeight','bold','Interpreter','none');
     drawnow
     
-    %% DO 2-way ANOVA
-    anovRes = satAnova(rscData(:,{'absRho','satCondition','outcome'}),'model','interaction',...
-        'doMultiCompare',true,...
-        'multiCompareDisplay','off',...
-        'alpha',0.05);
-    anovaTbl = anovRes.anovaTbl;
-    satConditionByOutcome = sortrows(anovRes.satCondition_outcome(:,[1:6 9]),...
-        {'levelName1','levelName2'},{'ascend','descend'});
-    outcomeStats = rscOutcomesStats(:,[1,5,6,8,9,11,12]);
-    satStats = rscSatConditionStats(:,[1,3,4,6,7,9,10]);
-    satStats.Properties.VariableNames = outcomeStats.Properties.VariableNames;
-    allStats = [satStats;outcomeStats];
     
-    sheetName_prefix = [monkey useNeuronType];
-    writetable(anovaTbl,oExcelFile,'UseExcel',true,'Sheet',[sheetName_prefix '_anova']);
-    writetable(satConditionByOutcome,oExcelFile,'UseExcel',true,'Sheet',[sheetName_prefix '_Interaction']);
-    writetable(allStats,oExcelFile,'UseExcel',true,'Sheet',[sheetName_prefix '_Stats']);
+    %% Anova results to show?
+    anovaResultTbl.(useNeuronType).satConditionByOutcome = satConditionByOutcome;
+    anovaResultTbl.(useNeuronType).anovaTbl = anovaTbl;
+    anovaResultTbl.(useNeuronType).allStats = allStats;
+    %tempTxt = getAnovaText(satConditionByOutcome,anovaTbl,allStats);
+    
         
 end
 ppretty([8,5],'XMinorTick','off');
 gcf;
 print(oPdfFile,'-dpdf')
-
-%% Do 2-way anova and write excel file with multiple sheets
-% do anova
-
+% save mat file of anova results
+save(oMatFile,'-v7.3','-struct','anovaResultTbl');
 end
-
 
 
 

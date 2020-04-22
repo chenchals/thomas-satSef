@@ -40,8 +40,7 @@ rscPostSaccade.isSefErrorUnit = abs(spkCorr.X_errGrade) > 1 | abs(spkCorr.X_rewG
 
 %% RSC by Unit Type
 unitTypes = {'ALL_NEURONS','ERROR_NEURONS','OTHER_NEURONS'};
-figure08_RscByUnitType(rscPostSaccade,unitTypes);
-
+fig08RscUnitType(rscPostSaccade,unitTypes);
 
 end
 

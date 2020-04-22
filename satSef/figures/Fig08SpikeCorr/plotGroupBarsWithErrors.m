@@ -1,4 +1,4 @@
-function [barCentersTbl, errBarHandles] = plotGroupBarsWithErrors(cellArrCategories,yMean,yErr,varargin) %#ok<*INUSL>
+function [barCentersTbl, errBarHandles] = plotGroupBarsWithErrors(cellArrCategories,yMean,yErr,cellArrSignifStr,varargin) %#ok<*INUSL>
 
    if numel(varargin) == 0
        accClr = [1 0.2 0.2];
@@ -27,7 +27,7 @@ function [barCentersTbl, errBarHandles] = plotGroupBarsWithErrors(cellArrCategor
     end
     set(gca,'xticklabels',cellArrCategories,'TickLabelInterpreter','none','XTickLabelRotation',20);
     %set(gca,'YGrid','on')
-    ylabel('Mean r_{sc} \pm SEM (abs.)');
+    ylabel('Mean |r_{sc}| \pm SEM ');
     set(gca,'Ylim',yLims);
     set(gca,'FontWeight','bold','FontSize',8);
     hold on
@@ -42,17 +42,16 @@ function [barCentersTbl, errBarHandles] = plotGroupBarsWithErrors(cellArrCategor
     barCentersTbl.Properties.RowNames = arrayfun(@(x) sprintf('Group#%d',x),1:size(barCentersTbl,1),'UniformOutput',false);
     
     
-%     %%add text values to plot
-%     if isPlusRhos
-%         set(errBarHandles,'YPositiveDelta',[]);
-%         y = 0.2;
-%         va = 'bottom';
-%     else
-%         set(errBarHandles,'YNegativeDelta',[]);
-%          y = -0.2;
-%         va = 'top';
-%    end    
-%     
+    % add significance strings to the plot 
+    if ~isempty(cellArrSignifStr) && numel(cellArrCategories) == numel(cellArrSignifStr)
+        txt = {sprintf('%16s','p < 0.05')};
+        for ii = 1:numel(cellArrCategories)
+            txt = [txt;{sprintf('%14s  %s',cellArrCategories{ii},cellArrSignifStr{ii})}]; %#ok<AGROW>
+        end       
+    end
+    
+    h_txt = text(0.5,max(get(gca,'YLim'))*0.9,txt,'FontSize',8);
+    
 %     
 %     [txtPairArea,txtAcc,txtFast] = arrayfun(@(x) deal(sprintf('%14s',xData{x,1}),...
 %         sprintf('%0.2f\\pm%0.2f %4d',yMean(x,1),yErr(x,1),nPairs(x,1)),...
