@@ -15,7 +15,7 @@ function [barCentersTbl, errBarHandles] = plotGroupBarsWithErrors(cellArrCategor
     
     temp = yMean(:);
     if max(temp) > max(yLims)
-        yLims = [0 0.26]; % manually checked...
+        yLims = [0 0.30]; % manually checked...
     end
     
     %x = categorical(xData(:,1));
@@ -44,13 +44,14 @@ function [barCentersTbl, errBarHandles] = plotGroupBarsWithErrors(cellArrCategor
     
     % add significance strings to the plot 
     if ~isempty(cellArrSignifStr) && numel(cellArrCategories) == numel(cellArrSignifStr)
-        txt = {sprintf('%16s','p < 0.05')};
+        txt = {sprintf('%8s','signif.')};
         for ii = 1:numel(cellArrCategories)
-            txt = [txt;{sprintf('%14s  %s',cellArrCategories{ii},cellArrSignifStr{ii})}]; %#ok<AGROW>
+            t = regexprep(cellArrCategories{ii},'[a-z]','');
+            txt = [txt;{sprintf('%4s  %s',t,cellArrSignifStr{ii})}]; %#ok<AGROW>
         end       
     end
     
-    h_txt = text(0.5,max(get(gca,'YLim'))*0.9,txt,'FontSize',8);
+    h_txt = text(0.5,max(get(gca,'YLim'))*0.9,txt,'FontSize',7);
     
 %     
 %     [txtPairArea,txtAcc,txtFast] = arrayfun(@(x) deal(sprintf('%14s',xData{x,1}),...

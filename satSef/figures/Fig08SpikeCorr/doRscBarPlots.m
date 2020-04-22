@@ -14,7 +14,7 @@ if strcmp(useNeuronType,'ALL_NEURONS')
     titleStr = 'All neurons';
 elseif strcmp(useNeuronType,'ERROR_NEURONS')
     idxRos = rscData.isSefErrorUnit == 1;
-    titleStr = 'Neurons signalling error';
+    titleStr = 'Error neurons';
 elseif strcmp(useNeuronType,'OTHER_NEURONS')
     idxRos = rscData.isSefErrorUnit == 0;
     titleStr = 'Other neurons';
@@ -103,7 +103,7 @@ ci40 = getCi(abs(rscData.rhoEst40(idx)));
 overplotBox(barCenter,ci40,'k','-');
 ci80 = getCi(abs(rscData.rhoEst80(idx)));
 overplotBox(barCenter,ci80,'k',':');
-title(titleStr,'FontWeight','bold','Interpreter','none');
+title([monkey '--' titleStr],'FontWeight','bold','Interpreter','none');
 drawnow
 
 % Anova results to show?

@@ -1,10 +1,13 @@
 function [anovaResultTbl] = fig08RscUnitType(rscData, useNeuronTypes)
 %FIG08RSCUNITTYPE Summary of this function goes here
 monkey = 'Da_Eu';
-
-oPdfFile = 'figure08_RscByUnitType.pdf';
-oExcelFile = 'figure08_RscByUnitType.xlsx';
-oMatFile = 'figure08_RscByUnitType.mat';
+figDir = 'fig08';
+if ~exist(figDir,'dir')
+    mkdir(figDir);
+end
+oPdfFile = fullfile(figDir,'fig08_RscByUnitType.pdf');
+oExcelFile = regexprep(oPdfFile,'pdf$','xlsx');
+oMatFile = regexprep(oPdfFile,'pdf$','mat');
 oFiles = {oPdfFile,oExcelFile,oMatFile};
 for oF = oFiles
     if exist(oF{1},'file')
