@@ -1,24 +1,16 @@
 function [barCentersTbl, errBarHandles] = plotGroupBarsWithErrors(cellArrCategories,yMean,yErr,cellArrSignifStr,varargin) %#ok<*INUSL>
 
-   if numel(varargin) == 0
-       accClr = [1 0.2 0.2];
-       fasClr = [0.2 1.0 0.2];
 
-       grpColors = {accClr;fasClr};
-   else
-       grpColors = varargin{1};
-   end
+    argParser = inputParser();
+    argParser.addParameter('groupColors',{[255 0 0];[0 180 0]});
+    argParser.addParameter('yLim',[]);
 
-    % find minRho for negative Rho 
-    % manually was [-0.2 0.45]
-    yLims = [0 0.18];
+    argParser.parse(varargin{:});
+    args = argParser.Results;
+
+    grpColors = args.groupColors;
+    yLim = args.yLim;
     
-    temp = yMean(:);
-    if max(temp) > max(yLims)
-        yLims = [0 0.30]; % manually checked...
-    end
-    
-    %x = categorical(xData(:,1));
     x = 1:numel(cellArrCategories);
     hBar = bar(x,yMean,'FaceAlpha',0.6,'BarWidth',0.9);
     if ~isempty(grpColors)
@@ -27,8 +19,11 @@ function [barCentersTbl, errBarHandles] = plotGroupBarsWithErrors(cellArrCategor
     end
     set(gca,'xticklabels',cellArrCategories,'TickLabelInterpreter','none','XTickLabelRotation',20);
     %set(gca,'YGrid','on')
-    ylabel('Mean |r_{sc}| \pm SEM ');
-    set(gca,'Ylim',yLims);
+    ylabel('|r_{sc}|');
+    if ~isempty(yLim)
+        set(gca,'Ylim',yLim);
+    end
+    
     set(gca,'FontWeight','bold','FontSize',8);
     hold on
     for k1 = 1:size(yMean,2)
@@ -40,8 +35,7 @@ function [barCentersTbl, errBarHandles] = plotGroupBarsWithErrors(cellArrCategor
     
     barCentersTbl = array2table(barCenters,'VariableNames',cellArrCategories);
     barCentersTbl.Properties.RowNames = arrayfun(@(x) sprintf('Group#%d',x),1:size(barCentersTbl,1),'UniformOutput',false);
-    
-    
+       
     % add significance strings to the plot 
     if ~isempty(cellArrSignifStr) && numel(cellArrCategories) == numel(cellArrSignifStr)
         txt = {sprintf('%8s','signif.')};

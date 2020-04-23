@@ -253,6 +253,8 @@ function [rhoEst,rhoEstSem,percentileCI,normalCI] = getEstimatedRhoAndConfInterv
     temp = cell2mat(temp);
     rhoVec = temp(:,1);
     % compute mean & sem
+    % remove NaNs from computation
+    rhoVec(isnan(rhoVec)) = [];
     rhoEst = mean(rhoVec);
     rhoEstSem = std(rhoVec)/sqrt(numel(rhoVec));
     % compute t-statistic for 0.025, 0.975

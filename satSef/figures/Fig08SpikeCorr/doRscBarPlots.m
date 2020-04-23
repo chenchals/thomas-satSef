@@ -18,6 +18,17 @@ elseif strcmp(useNeuronType,'ERROR_NEURONS')
 elseif strcmp(useNeuronType,'OTHER_NEURONS')
     idxRos = rscData.isSefErrorUnit == 0;
     titleStr = 'Other neurons';
+elseif strcmp(useNeuronType,'FEF')
+    idxRos = ismember(rscData.Y_area, useNeuronType);
+    titleStr = 'SEF-FEF';
+elseif strcmp(useNeuronType,'SC')
+    idxRos = ismember(rscData.Y_area, useNeuronType);
+    titleStr = 'SEF-SC';
+end
+
+if sum(idxRos) == 0
+    anovaResultTbl = [];
+    return;
 end
 
 rscSatConditionStats = grpstats(rscData(idxRos,['satCondition', rhocols]),'satCondition',{'mean','std','sem'});
@@ -53,9 +64,6 @@ writetable(allStats,oExcelFile,'UseExcel',true,'Sheet',[sheetName_prefix '_Stats
 
 %% Plot results/means
 % display 3 groups of 2 bars each
-accClr = [1 0.2 0.2];
-fasClr = [0.2 1.0 0.2];
-grpColors = {accClr;fasClr};
 
 idxAccu = ismember(rscOutcomesStats.satCondition,'Accurate');
 idxFast = ismember(rscOutcomesStats.satCondition,'Fast');
@@ -72,8 +80,7 @@ signifStrs = satConditionByOutcome.signifStr(roIds);
 [barCentersTbl, ~] = plotGroupBarsWithErrors(outcomeLabels,...
     [accuTbl.mean_absRho fastTbl.mean_absRho],...
     [accuTbl.sem_absRho fastTbl.sem_absRho],...
-    signifStrs,...
-    grpColors);
+    signifStrs);
 
 % Add boxes for Confidence interval
 % Acurate_Error_Timing ci/percentile 10/90 for 40 subsamples

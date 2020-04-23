@@ -25,6 +25,7 @@ epoch = 'PostSaccade';
 spkCorr = spkCorr(ismember(spkCorr.epoch,epoch),:);
 rscPostSaccade = table();
 rscPostSaccade.monkey = spkCorr.X_monkey;
+rscPostSaccade.Y_area = spkCorr.Y_area;
 rscPostSaccade.condition = spkCorr.condition;
 rscPostSaccade.satCondition = spkCorr.satCondition;
 rscPostSaccade.outcome = spkCorr.outcome;
@@ -41,13 +42,17 @@ warning('off')
 %% RSC by Unit Type
 unitTypes = {'ALL_NEURONS','ERROR_NEURONS','OTHER_NEURONS'};
 fig08RscUnitType(rscPostSaccade,unitTypes);
-%%  by monkey...
+%%  by monkey...All neurons
 monkeys = {'Da','Eu'};
 unitTypes = {'ALL_NEURONS'};
 fig08SupplRscMonkUnitType(rscPostSaccade,monkeys,unitTypes);
-%%  by monkey...
+%%  by monkey...error and other neurons
 monkeys = {'Da','Eu'};
 unitTypes = {'ERROR_NEURONS','OTHER_NEURONS'};
+fig08SupplRscMonkUnitType(rscPostSaccade,monkeys,unitTypes);
+%% by monkey...FEF and SC pairs with SEF
+monkeys = {'Da','Eu','Da_Eu'};
+unitTypes = {'FEF','SC'};
 fig08SupplRscMonkUnitType(rscPostSaccade,monkeys,unitTypes);
 
 

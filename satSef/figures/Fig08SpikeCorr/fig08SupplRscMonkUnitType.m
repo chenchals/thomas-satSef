@@ -2,10 +2,12 @@ function [anovaResultTbl] = fig08SupplRscMonkUnitType(rscData, monkeys, useNeuro
 %FIG08SUPPLRSCMONKUNITTYPE Summary of this function goes here
 if numel(useNeuronTypes) == 1
     midfix = '_A_';
+elseif numel(useNeuronTypes) == 2 && sum(contains(useNeuronTypes,'FEF'))
+    midfix = '_A2_';
 elseif numel(useNeuronTypes) == 2
     midfix = '_B_';
 else
-    minFix = '_';
+    midfix = '_';
 end
 figDir = 'fig08';
 if ~exist(figDir,'dir')
@@ -33,7 +35,12 @@ for mon = 1:numel(monkeys)
         monkData = rscData(contains(rscData.monkey,monkey(1)),:);
         plotNo = plotNo + 1;
         subplot(1,nSubplots,plotNo);
-        anovaResultTbl.(monkey).(useNeuronType) = doRscBarPlots(monkData,monkey,useNeuronType,oExcelFile);
+        temp = doRscBarPlots(monkData,monkey,useNeuronType,oExcelFile);
+        if ~isempty(temp)
+        anovaResultTbl.(monkey).(useNeuronType) = temp;
+        else
+            plotNo = plotNo - 1;
+        end
     end
 end
 ppretty([8,5],'XMinorTick','off');
