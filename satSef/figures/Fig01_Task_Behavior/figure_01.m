@@ -7,7 +7,7 @@ function [] = figure_01()
 %          PPRETTY
 % Needs behavior data
 %%
-binfoFile = 'dataProcessed/dataset/dataBehavior_SAT.mat';
+binfoFile = 'dataProcessed/satSefPaper/dataset/dataBehavior_SAT.mat';
 binfoAll = load(binfoFile);
 binfo = binfoAll.binfoSAT;
 pSacc = binfoAll.primarySaccade;
