@@ -1,20 +1,12 @@
-function [anovaResultTbl] = fig08SupplRscMonkUnitType(rscData, monkeys, useNeuronTypes)
-%FIG08SUPPLRSCMONKUNITTYPE Summary of this function goes here
-if numel(useNeuronTypes) == 1
-    midfix = '_A_';
-elseif numel(useNeuronTypes) == 2 && sum(contains(useNeuronTypes,'FEF'))
-    midfix = '_A2_';
-elseif numel(useNeuronTypes) == 2
-    midfix = '_B_';
-else
-    midfix = '_';
-end
+function [anovaResultTbl] = fig08RscMonkUnitType(rscData, monkeys, cellArrUnitTypes,pdfFilename)
+%FIG08RSCMONKUNITTYPE Summary of this function goes here
+
 figDir = 'fig08';
 if ~exist(figDir,'dir')
     mkdir(figDir);
 end
 
-oPdfFile =  fullfile(figDir,['fig08Suppl' midfix 'RscByUnitType.pdf']);
+oPdfFile =  fullfile(figDir,pdfFilename);
 oExcelFile = regexprep(oPdfFile,'pdf$','xlsx');
 oMatFile = regexprep(oPdfFile,'pdf$','mat');
 oFiles = {oPdfFile,oExcelFile,oMatFile};
@@ -26,12 +18,13 @@ end
 
 anovaResultTbl = struct();
 figure
-nSubplots = numel(monkeys)*numel(useNeuronTypes);
+nSubplots = sum(cellfun(@(x) numel(x),cellArrUnitTypes));
 plotNo = 0;
 for mon = 1:numel(monkeys)
     monkey = monkeys{mon};
-    for un = 1:numel(useNeuronTypes)
-        useNeuronType = useNeuronTypes{un};
+    unitTypes = cellArrUnitTypes{mon};
+    for un = 1:numel(unitTypes)
+        useNeuronType = unitTypes{un};
         monkData = rscData(contains(rscData.monkey,monkey(1)),:);
         plotNo = plotNo + 1;
         subplot(1,nSubplots,plotNo);

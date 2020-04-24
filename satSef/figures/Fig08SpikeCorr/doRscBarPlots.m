@@ -56,11 +56,13 @@ outcomeStats = rscOutcomesStats(:,[1,4,5,6,7,8,9,11,12]);
 satStats = rscSatConditionStats(:,[1,2,3,4,5,6,7,9,10]);
 satStats.Properties.VariableNames = outcomeStats.Properties.VariableNames;
 allStats = [satStats;outcomeStats];
-% write output to excel file
-sheetName_prefix = [monkey useNeuronType];
-writetable(anovaTbl,oExcelFile,'UseExcel',true,'Sheet',[sheetName_prefix '_anova']);
-writetable(satConditionByOutcome,oExcelFile,'UseExcel',true,'Sheet',[sheetName_prefix '_Interaction']);
-writetable(allStats,oExcelFile,'UseExcel',true,'Sheet',[sheetName_prefix '_Stats']);
+% add CI table
+temp = zeros(size(allStats,1),1);
+allStats.loCI_40 = temp;
+allStats.hiCI_40 = temp;
+allStats.loCI_80 = temp;
+allStats.hiCI_80 = temp;
+
 
 %% Plot results/means
 % display 3 groups of 2 bars each
@@ -88,12 +90,19 @@ barCenter = barCentersTbl.ErrorTiming(1);
 idx = ismember(rscData.condition,'AccurateErrorTiming');
 ci = getCi(abs(rscData.rhoEst40(idx)));
 overplotBox(barCenter,ci,'k','-');
+idx = ismember(allStats.condition,'AccurateErrorTiming');
+allStats.loCI_40(idx) = ci(1);
+allStats.hiCI_40(idx) = ci(2);
+
 
 % Fast_Error_Choice ci/percentile 10/90 for 80 subsamples
 idx = ismember(rscData.condition,'FastErrorChoice');
 barCenter = barCentersTbl.ErrorChoice(2);
 ci = getCi(abs(rscData.rhoEst80(idx)));
 overplotBox(barCenter,ci,'k',':');
+idx = ismember(allStats.condition,'FastErrorChoice');
+allStats.loCI_80(idx) = ci(1);
+allStats.hiCI_80(idx) = ci(2);
 
 % Accurate_Correct percentile 10/90 for 80 subsamples
 idx = ismember(rscData.condition,'AccurateCorrect');
@@ -102,6 +111,11 @@ ci40 = getCi(abs(rscData.rhoEst40(idx)));
 overplotBox(barCenter,ci40,'k','-');
 ci80 = getCi(abs(rscData.rhoEst80(idx)));
 overplotBox(barCenter,ci80,'k',':');
+idx = ismember(allStats.condition,'AccurateCorrect');
+allStats.loCI_40(idx) = ci40(1);
+allStats.hiCI_40(idx) = ci40(2);
+allStats.loCI_80(idx) = ci80(1);
+allStats.hiCI_80(idx) = ci80(2);
 
 % Fast_Correct percentile 10/90 for 80 subsamples
 idx = ismember(rscData.condition,'FastCorrect');
@@ -110,6 +124,12 @@ ci40 = getCi(abs(rscData.rhoEst40(idx)));
 overplotBox(barCenter,ci40,'k','-');
 ci80 = getCi(abs(rscData.rhoEst80(idx)));
 overplotBox(barCenter,ci80,'k',':');
+idx = ismember(allStats.condition,'FastCorrect');
+allStats.loCI_40(idx) = ci40(1);
+allStats.hiCI_40(idx) = ci40(2);
+allStats.loCI_80(idx) = ci80(1);
+allStats.hiCI_80(idx) = ci80(2);
+
 title([monkey '--' titleStr],'FontWeight','bold','Interpreter','none');
 drawnow
 
@@ -117,6 +137,15 @@ drawnow
 anovaResultTbl.satConditionByOutcome = satConditionByOutcome;
 anovaResultTbl.anovaTbl = anovaTbl;
 anovaResultTbl.allStats = allStats;
+
+% write output to excel file
+writeToExcel = false;
+if writeToExcel
+    sheetName_prefix = [monkey useNeuronType]; %#ok<UNRCH>
+    writetable(anovaTbl,oExcelFile,'UseExcel',true,'Sheet',[sheetName_prefix '_anova']);
+    writetable(satConditionByOutcome,oExcelFile,'UseExcel',true,'Sheet',[sheetName_prefix '_Interaction']);
+    writetable(allStats,oExcelFile,'UseExcel',true,'Sheet',[sheetName_prefix '_Stats']);
+end
 
 end
 

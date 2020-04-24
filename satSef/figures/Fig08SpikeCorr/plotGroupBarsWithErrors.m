@@ -8,14 +8,14 @@ function [barCentersTbl, errBarHandles] = plotGroupBarsWithErrors(cellArrCategor
     argParser.parse(varargin{:});
     args = argParser.Results;
 
-    grpColors = args.groupColors;
+    grpColors = args.groupColors;% mustbe between 0-1
     yLim = args.yLim;
     
     x = 1:numel(cellArrCategories);
     hBar = bar(x,yMean,'FaceAlpha',0.6,'BarWidth',0.9);
     if ~isempty(grpColors)
-        set(hBar(1),'FaceColor',grpColors{1}); 
-        set(hBar(2),'FaceColor',grpColors{2});
+        set(hBar(1),'FaceColor',grpColors{1}./255); 
+        set(hBar(2),'FaceColor',grpColors{2}./255);
     end
     set(gca,'xticklabels',cellArrCategories,'TickLabelInterpreter','none','XTickLabelRotation',20);
     %set(gca,'YGrid','on')

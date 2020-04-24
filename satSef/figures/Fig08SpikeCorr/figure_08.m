@@ -39,21 +39,34 @@ rscPostSaccade.absRhoEst80 = abs(spkCorr.rhoEstRaw_nTrials_80);
 % add isSefErrorNeuron
 rscPostSaccade.isSefErrorUnit = abs(spkCorr.X_errGrade) > 1 | abs(spkCorr.X_rewGrade) > 1;
 warning('off')
+
 %% RSC by Unit Type
-unitTypes = {'ALL_NEURONS','ERROR_NEURONS','OTHER_NEURONS'};
-fig08RscUnitType(rscPostSaccade,unitTypes);
+monkeys = {'Da_Eu'};
+monkUnitTypes = {{'ALL_NEURONS','ERROR_NEURONS','OTHER_NEURONS'}};
+pdfFilename = 'fig08_RscByUnitType.pdf';
+fig08RscMonkUnitType(rscPostSaccade,monkeys,monkUnitTypes,pdfFilename);
+
 %%  by monkey...All neurons
 monkeys = {'Da','Eu'};
-unitTypes = {'ALL_NEURONS'};
-fig08SupplRscMonkUnitType(rscPostSaccade,monkeys,unitTypes);
+monkUnitTypes = {{'ALL_NEURONS'}
+                 {'ALL_NEURONS'}};
+pdfFilename = 'fig08Suppl_RscMonkByAllUnits.pdf';             
+fig08RscMonkUnitType(rscPostSaccade,monkeys,monkUnitTypes,pdfFilename);
+
 %%  by monkey...error and other neurons
 monkeys = {'Da','Eu'};
-unitTypes = {'ERROR_NEURONS','OTHER_NEURONS'};
-fig08SupplRscMonkUnitType(rscPostSaccade,monkeys,unitTypes);
+monkUnitTypes = {{'ERROR_NEURONS','OTHER_NEURONS'}
+                 {'ERROR_NEURONS','OTHER_NEURONS'}};
+pdfFilename = 'fig08Suppl_RscMonkByUnitType.pdf';             
+fig08RscMonkUnitType(rscPostSaccade,monkeys,monkUnitTypes,pdfFilename);
+
 %% by monkey...FEF and SC pairs with SEF
 monkeys = {'Da','Eu','Da_Eu'};
-unitTypes = {'FEF','SC'};
-fig08SupplRscMonkUnitType(rscPostSaccade,monkeys,unitTypes);
+monkUnitTypes = {{'FEF','SC'}
+                 {'SC'}
+                 {'SC'}};
+pdfFilename = 'fig08Suppl_RscByArea.pdf';
+fig08RscMonkUnitType(rscPostSaccade,monkeys,monkUnitTypes,pdfFilename);
 
 
 end
