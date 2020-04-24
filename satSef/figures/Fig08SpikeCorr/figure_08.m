@@ -42,9 +42,9 @@ warning('off')
 
 %% RSC by Unit Type
 monkeys = {'Da_Eu'};
-monkUnitTypes = {{'ALL_NEURONS','ERROR_NEURONS','OTHER_NEURONS'}};
+errorTypes = {{'ALL_NEURONS','ERROR_NEURONS','OTHER_NEURONS'}};
 pdfFilename = 'fig08_RscByUnitType.pdf';
-fig08RscMonkUnitType(rscPostSaccade,monkeys,monkUnitTypes,pdfFilename);
+fig08RscMonkUnitType(rscPostSaccade,pdfFilename,'monkeys',monkeys,'errorTypes',errorTypes);
 
 %%  by monkey...All neurons
 monkeys = {'Da','Eu'};
@@ -61,6 +61,7 @@ pdfFilename = 'fig08Suppl_RscMonkByUnitType.pdf';
 fig08RscMonkUnitType(rscPostSaccade,monkeys,monkUnitTypes,pdfFilename);
 
 %% by monkey...FEF and SC pairs with SEF
+%  Da-SEF-FEF, Da-SEF-SC, Eu-SEF-SC, Da_Eu-SEF-SC
 monkeys = {'Da','Eu','Da_Eu'};
 monkUnitTypes = {{'FEF','SC'}
                  {'SC'}
@@ -68,8 +69,24 @@ monkUnitTypes = {{'FEF','SC'}
 pdfFilename = 'fig08Suppl_RscByArea.pdf';
 fig08RscMonkUnitType(rscPostSaccade,monkeys,monkUnitTypes,pdfFilename);
 
+%% RSC by monk by area by errorType
+%  Da-SEF-FEF-Error, Da-SEF-FEF-Other
+%  Da-SEF-SC-Error, Da-SEF-SC-Other
+
+monkeys = {'Da'};
+unitAreas = {{'FEF','SC'}};
+errorTypes = {{'ERROR_NEURONS','OTHER_NEURONS'}};
+pdfFilename = 'fig08_RscByUnitType.pdf';
+fig08RscMonkUnitType(rscPostSaccade,pdfFilename,'monkeys',monkeys,'unitAreas',unitAreas,'errorTypes',errorTypes);
 
 end
+% 
+%                 Da-SEF-FEF, Da-SEF-SC, Eu-SEF-SC, Da_Eu-SEF-SC
+%                Da-SEF-FEF-Error, Da-SEF-FEF-Other
+%                Da-SEF-SC-Error, Da-SEF-SC-Other
+%                Eu-SEF-SC-Error, Eu-SEF-SC-Other
+%                Da_Eu-SEF-SC-Error, Da_Eu-SEF-SC-Other
+
 
 %%
 %%
