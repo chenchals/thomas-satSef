@@ -15,7 +15,6 @@ function [spkCorr] = createSpikeCorrWithSubSampling()
 %   IF min(trialNos4SatConds) < nTrialsThreshold THEN
 %       ignore crossPair, go to next crossPair
 %   ELSE-IF-min(trialNos4SatConds) >= nTrialsThreshold THEN
-%       nTrials4SubSample = min(nTrials4SatConds)
 %       satCondWithMinTrials = whichSatCondIs(nTrials4SubSample)
 %       satConds2SubSample = whichSatCondIs(>nTrials4SubSample)
 %       FOR-each-satCond in allSatConds DO
@@ -30,6 +29,7 @@ function [spkCorr] = createSpikeCorrWithSubSampling()
 %           [cpRsc,cpPairPval] = corr(X_unitSpkCountByTrial,
 %                Y_unitSpkCountByTrial) Pearson's
 %            IF-is-member(satConds2SubSample,satCond) THEN
+%                nTerials4SubSample = 40 or 80;
 %                FOR-1-to-nSubSamples DO
 %                    subSampIdx = subsample(1:nTrials4SatCond,
 %                        nTrials4SubSample) 
@@ -67,15 +67,16 @@ function [spkCorr] = createSpikeCorrWithSubSampling()
     trialTypesFile = fullfile(datasetDir,'SAT_SEF_TrialTypesDB.mat');
     trialEventTimesFile = fullfile(datasetDir,'SAT_SEF_TrialEventTimesDB.mat');
     spikeTimesFile = fullfile(datasetDir,'spikes_SAT.mat');
-    % output file
-    outFile = 'newRscSubSampling1K_AllEpochs.mat';
 
     % alignment
     % Setup time windows for different event time alignment, the field names
     % SHALL correspond to column names for trialEventTimes below.
-    alignNames = {'Baseline','Visual','PostSaccade','PostReward'};
-    alignEvents = {'CueOn','CueOn','SaccadePrimary','RewardTime'};
-    alignTimeWin = {[-600 100],[-200 400],[-100 500],[-200 700]};
+    % output file
+    outFile = 'rscSubSampl1K_PostSaccade.mat';
+
+    alignNames = {'PostSaccade'}; % {'Baseline','Visual','PostSaccade','PostReward'};
+    alignEvents = {'PostSaccade'}; % {'CueOn','CueOn','SaccadePrimary','RewardTime'};
+    alignTimeWin = {[-100 500]}; % {[-600 100],[-200 400],[-100 500],[-200 700]};
 
     conditions = {'AccurateCorrect';'AccurateErrorChoice';'AccurateErrorTiming';
         'FastCorrect';    'FastErrorChoice';    'FastErrorTiming'
@@ -127,7 +128,7 @@ function [spkCorr] = createSpikeCorrWithSubSampling()
         ySpkTimes = spikesSat{crossPair.Y_unitNum}';
         evntTimes = sessionEventTimes(ismember(sessionEventTimes.session,sess),:);
         
-        opts = struct();
+        tempCorr = struct();
         for sc = 1:numel(conditions)
             condition = conditions{sc};
             selTrials = trialNos4SatConds.(condition);
@@ -160,21 +161,18 @@ function [spkCorr] = createSpikeCorrWithSubSampling()
                 [rho_pval] = getSpikeCountCorr(xSpkCounts{1},ySpkCounts{1},'Pearson');
                 %% Do sub-sampling to estimate Rho and CI
                 % nTrials4SubSample, selTrials
-                [rhoEst,rhoEstSem,prctile_10_90,ci95] = ...
-                     getEstimatedRhoAndConfInterval(xSpkCounts{1},...
-                                                    ySpkCounts{1},...
-                                                    nTrials4SubSample,...
-                                                    nSubSamples,[10 90]);
-                  %% Since mean-trial-count for Fast-ErrorTiming ~ 40 (37.29)
+                % does a minTrial count subsampling. But do not need this. 
+                % We will do only 40 / 80 random trials for each nSubSamples
+                %% Since mean-trial-count for Fast-ErrorTiming ~ 40 (37.29)
                 nTrials40SubSample = 40;
-                [rhoEst40,rhoEstSem40,prctile_10_90_nTrials_40,ci95_nTrials_40] = ...
+                [rhoEst40,rhoEstSem40,prctile_10_90_nTrials_40,ci95_nTrials_40,subSampleIdxs_40,rhoVecSubSamples_40] = ...
                      getEstimatedRhoAndConfInterval(xSpkCounts{1},...
                                                     ySpkCounts{1},...
                                                     nTrials40SubSample,...
                                                     nSubSamples,[10 90]);
                 %% Since mean-trial-count for Accurate-ErrorChoice ~ 80 (79.56)
                 nTrials80SubSample = 80;
-                [rhoEst80,rhoEstSem80,prctile_10_90_nTrials_80,ci95_nTrials_80] = ...
+                [rhoEst80,rhoEstSem80,prctile_10_90_nTrials_80,ci95_nTrials_80,subSampleIdxs_80,rhoVecSubSamples_80] = ...
                      getEstimatedRhoAndConfInterval(xSpkCounts{1},...
                                                     ySpkCounts{1},...
                                                     nTrials80SubSample,...
@@ -185,57 +183,48 @@ function [spkCorr] = createSpikeCorrWithSubSampling()
                 cN = getPairColNmes();
                 cpTemp = table2struct(crossPair,'ToScalar',true);
                 for c = 1:numel(cN)
-                    opts(evId,sc).(cN{c}) = cpTemp.(cN{c});
+                    tempCorr(evId,sc).(cN{c}) = cpTemp.(cN{c});
                 end
-                opts(evId,sc).condition = condition;
-                opts(evId,sc).alignedName = alignedName;
-                opts(evId,sc).alignedEvent = alignedEvent;
-                opts(evId,sc).alignedTimeWin = {alignedTimeWin};
-                opts(evId,sc).alignTime = alignTime;
-                opts(evId,sc).trialNosByCondition = selTrialsSorted;
-                opts(evId,sc).nTrials = numel(selTrialsSorted);
+                tempCorr(evId,sc).condition = condition;
+                tempCorr(evId,sc).alignedName = alignedName;
+                tempCorr(evId,sc).alignedEvent = alignedEvent;
+                tempCorr(evId,sc).alignedTimeWin = {alignedTimeWin};
+                tempCorr(evId,sc).alignTime = alignTime;
+                tempCorr(evId,sc).trialNosByCondition = selTrialsSorted;
+                tempCorr(evId,sc).nTrials = numel(selTrialsSorted);
 
-                opts(evId,sc).(['xSpkCount_win' fieldSuffix]) = xSpkCounts;
-                opts(evId,sc).(['ySpkCount_win' fieldSuffix]) = ySpkCounts;
-                opts(evId,sc).(['xMeanFr_spkPerSec_win' fieldSuffix]) = xMeanFrWin;
-                opts(evId,sc).(['yMeanFr_spkPerSec_win' fieldSuffix]) = yMeanFrWin;
+                tempCorr(evId,sc).(['xSpkCount_win' fieldSuffix]) = xSpkCounts;
+                tempCorr(evId,sc).(['ySpkCount_win' fieldSuffix]) = ySpkCounts;
+                tempCorr(evId,sc).(['xMeanFr_spkPerSec_win' fieldSuffix]) = xMeanFrWin;
+                tempCorr(evId,sc).(['yMeanFr_spkPerSec_win' fieldSuffix]) = yMeanFrWin;
 
-                opts(evId,sc).rho_pval_win = {staticWin};                    
-                opts(evId,sc).rhoRaw = rho_pval(1);
-                opts(evId,sc).pvalRaw = rho_pval(2);
-                opts(evId,sc).signifRaw_05 = rho_pval(2) < 0.05;  
+                tempCorr(evId,sc).rho_pval_win = {staticWin};                    
+                tempCorr(evId,sc).rhoRaw = rho_pval(1);
+                tempCorr(evId,sc).pvalRaw = rho_pval(2);
+                tempCorr(evId,sc).signifRaw_05 = rho_pval(2) < 0.05;  
 
-                opts(evId,sc).nTrials4SubSample = nTrials4SubSample;
-                opts(evId,sc).nSubSamples = nSubSamples;
-                opts(evId,sc).rhoEstRaw = rhoEst;
-                opts(evId,sc).rhoEstSem = rhoEstSem;
-                opts(evId,sc).ci95 = {ci95};
-                opts(evId,sc).prctile_10_90 = {prctile_10_90};
-                opts(evId,sc).rhoRawInCi95 = ci95(1) < rho_pval(1) & rho_pval(1) < ci95(2);
-                opts(evId,sc).rhoRawInPrctile_10_90 = prctile_10_90(1) < rho_pval(1) & rho_pval(1) < prctile_10_90(2);               
-
-                opts(evId,sc).rhoEstRaw_nTrials_40 = rhoEst40;
-                opts(evId,sc).rhoEstSem_nTrials_40 = rhoEstSem40;
-                opts(evId,sc).ci95_nTrials_40 = {ci95_nTrials_40};
-                opts(evId,sc).prctile_10_90_nTrials_40 = {prctile_10_90_nTrials_40};
-                opts(evId,sc).rhoRawInCi95_nTrials_40 = ci95_nTrials_40(1) < rho_pval(1) & rho_pval(1) < ci95_nTrials_40(2);
-                opts(evId,sc).rhoRawInPrctile_10_90_nTrials_40 = prctile_10_90_nTrials_40(1) < rho_pval(1) & rho_pval(1) < prctile_10_90_nTrials_40(2);               
-
-                opts(evId,sc).rhoEstRaw_nTrials_80 = rhoEst80;
-                opts(evId,sc).rhoEstSem_nTrials_80 = rhoEstSem80;
-                opts(evId,sc).ci95_nTrials_80 = {ci95_nTrials_80};
-                opts(evId,sc).prctile_10_90_nTrials_80 = {prctile_10_90_nTrials_80};
-                opts(evId,sc).rhoRawInCi95_nTrials_80 = ci95_nTrials_80(1) < rho_pval(1) & rho_pval(1) < ci95_nTrials_80(2);
-                opts(evId,sc).rhoRawInPrctile_10_90_nTrials_80 = prctile_10_90_nTrials_80(1) < rho_pval(1) & rho_pval(1) < prctile_10_90_nTrials_80(2);               
+                tempCorr(evId,sc).subSamplIdxs_nTrials_40 = {single(subSampleIdxs_40)};
+                tempCorr(evId,sc).rhoVecSubSampl_nTrials_40 = {single(rhoVecSubSamples_40)};                
+                tempCorr(evId,sc).rhoEstRaw_nTrials_40 = rhoEst40;
+                tempCorr(evId,sc).rhoEstSem_nTrials_40 = rhoEstSem40;
+                tempCorr(evId,sc).ci95_nTrials_40 = {ci95_nTrials_40};
+                tempCorr(evId,sc).rhoRawInCi95_nTrials_40 = ci95_nTrials_40(1) < rho_pval(1) & rho_pval(1) < ci95_nTrials_40(2);
+ 
+                tempCorr(evId,sc).subSamplIdxs_nTrials_80 = {single(subSampleIdxs_80)};
+                tempCorr(evId,sc).rhoVecSubSampl_nTrials_80 = {single(rhoVecSubSamples_80)};                
+                tempCorr(evId,sc).rhoEstRaw_nTrials_80 = rhoEst80;
+                tempCorr(evId,sc).rhoEstSem_nTrials_80 = rhoEstSem80;
+                tempCorr(evId,sc).ci95_nTrials_80 = {ci95_nTrials_80};
+                tempCorr(evId,sc).rhoRawInCi95_nTrials_80 = ci95_nTrials_80(1) < rho_pval(1) & rho_pval(1) < ci95_nTrials_80(2);
 
              
             end % for aligned event
             %spkCorr = [spkCorr; [crossPair(1,getPairColNmes) struct2table(opts,'AsArray',true)]];
         end % for condition
         try
-        opts = opts(:);
-        for jj=1:numel(opts)
-            spkCorr = [spkCorr; struct2table(opts(jj),'AsArray',true)]; 
+        tempCorr = tempCorr(:);
+        for jj=1:numel(tempCorr)
+            spkCorr = [spkCorr; struct2table(tempCorr(jj),'AsArray',true)]; 
         end
         fprintf('Done pair %d of %d\n',cp,nCrossPairs)
         catch me
@@ -246,23 +235,23 @@ toc
 save(outFile,'-v7.3','spkCorr');
 end
 
-function [rhoEst,rhoEstSem,percentileCI,normalCI] = getEstimatedRhoAndConfInterval(xSpkCounts,ySpkCounts,nTrials4SubSample,nSubSamples, prctileRange)
+function [rhoEst,rhoEstSem,percentileCI,normalCI,subSampleIdxs,rhoVecSubSamples] = ...
+         getEstimatedRhoAndConfInterval(xSpkCounts,ySpkCounts,nTrials4SubSample,nSubSamples, prctileRange)
     % inline fx for subsampling see DATASAMPLE
     subSampleIdxs = arrayfun(@(x) datasample(1:numel(xSpkCounts),nTrials4SubSample,'Replace',true)',(1:nSubSamples),'UniformOutput',false);
-    temp = cellfun(@(x) getSpikeCountCorr(xSpkCounts(x),ySpkCounts(x),'Pearson'),subSampleIdxs','UniformOutput',false);
-    temp = cell2mat(temp);
-    rhoVec = temp(:,1);
+    rhoPvalSubSamples = cellfun(@(x) getSpikeCountCorr(xSpkCounts(x),ySpkCounts(x),'Pearson'),subSampleIdxs','UniformOutput',false);
+    rhoPvalSubSamples = cell2mat(rhoPvalSubSamples);
+    rhoVecSubSamples = rhoPvalSubSamples(:,1);
     % compute mean & sem
     % remove NaNs from computation
-    rhoVec(isnan(rhoVec)) = [];
-    rhoEst = mean(rhoVec);
-    rhoEstSem = std(rhoVec)/sqrt(numel(rhoVec));
+    rhoVecSubSamples(isnan(rhoVecSubSamples)) = [];
+    rhoEst = mean(rhoVecSubSamples);
+    rhoEstSem = std(rhoVecSubSamples)/sqrt(numel(rhoVecSubSamples));
     % compute t-statistic for 0.025, 0.975
     ts = tinv([0.025,0.975],nTrials4SubSample-1);
     normalCI = rhoEst + rhoEstSem*ts;
-    percentileCI =  prctile(rhoVec,prctileRange);
+    percentileCI =  prctile(rhoVecSubSamples,prctileRange); 
 end
-
 
 function [cellPairs] = getCrossAreaPairs(pairsFile)
     allCellPairs = load(pairsFile);
