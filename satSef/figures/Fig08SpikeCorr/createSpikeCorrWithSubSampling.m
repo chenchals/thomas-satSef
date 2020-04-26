@@ -75,7 +75,7 @@ function [spkCorr] = createSpikeCorrWithSubSampling()
     outFile = 'rscSubSampl1K_PostSaccade.mat';
 
     alignNames = {'PostSaccade'}; % {'Baseline','Visual','PostSaccade','PostReward'};
-    alignEvents = {'PostSaccade'}; % {'CueOn','CueOn','SaccadePrimary','RewardTime'};
+    alignEvents = {'SaccadePrimary'}; % {'CueOn','CueOn','SaccadePrimary','RewardTime'};
     alignTimeWin = {[-100 500]}; % {[-600 100],[-200 400],[-100 500],[-200 700]};
 
     conditions = {'AccurateCorrect';'AccurateErrorChoice';'AccurateErrorTiming';
@@ -108,8 +108,8 @@ function [spkCorr] = createSpikeCorrWithSubSampling()
     spkCorr = table();
     pctRunOnAll warning off;
     %parfor (cp = 1:nCrossPairs,nThreads)%nCrossPairs
-    parfor (cp = 1:nCrossPairs,nThreads)%nCrossPairs
-    %for (cp = 1:nCrossPairs)%nCrossPairs
+    %parfor (cp = 1:nCrossPairs,nThreads)%nCrossPairs
+    for (cp = 1:nCrossPairs)%nCrossPairs
         %%
         fprintf('doing pair %d\n',cp)
         crossPair = crossPairs(cp,:);
