@@ -203,15 +203,15 @@ function [spkCorr] = createSpikeCorrWithSubSampling()
                 tempCorr(evId,sc).pvalRaw = rho_pval(2);
                 tempCorr(evId,sc).signifRaw_05 = rho_pval(2) < 0.05;  
 
-                tempCorr(evId,sc).subSamplIdxs_nTrials_40 = {single(subSampleIdxs_40)};
-                tempCorr(evId,sc).rhoVecSubSampl_nTrials_40 = {single(rhoVecSubSamples_40)};                
+                tempCorr(evId,sc).subSamplIdxs_nTrials_40 = {subSampleIdxs_40};
+                tempCorr(evId,sc).rhoVecSubSampl_nTrials_40 = {rhoVecSubSamples_40};                
                 tempCorr(evId,sc).rhoEstRaw_nTrials_40 = rhoEst40;
                 tempCorr(evId,sc).rhoEstSem_nTrials_40 = rhoEstSem40;
                 tempCorr(evId,sc).ci95_nTrials_40 = {ci95_nTrials_40};
                 tempCorr(evId,sc).rhoRawInCi95_nTrials_40 = ci95_nTrials_40(1) < rho_pval(1) & rho_pval(1) < ci95_nTrials_40(2);
  
-                tempCorr(evId,sc).subSamplIdxs_nTrials_80 = {single(subSampleIdxs_80)};
-                tempCorr(evId,sc).rhoVecSubSampl_nTrials_80 = {single(rhoVecSubSamples_80)};                
+                tempCorr(evId,sc).subSamplIdxs_nTrials_80 = {subSampleIdxs_80};
+                tempCorr(evId,sc).rhoVecSubSampl_nTrials_80 = {rhoVecSubSamples_80};                
                 tempCorr(evId,sc).rhoEstRaw_nTrials_80 = rhoEst80;
                 tempCorr(evId,sc).rhoEstSem_nTrials_80 = rhoEstSem80;
                 tempCorr(evId,sc).ci95_nTrials_80 = {ci95_nTrials_80};
@@ -238,10 +238,10 @@ end
 function [rhoEst,rhoEstSem,percentileCI,normalCI,subSampleIdxs,rhoVecSubSamples] = ...
          getEstimatedRhoAndConfInterval(xSpkCounts,ySpkCounts,nTrials4SubSample,nSubSamples, prctileRange)
     % inline fx for subsampling see DATASAMPLE
-    subSampleIdxs = arrayfun(@(x) datasample(1:numel(xSpkCounts),nTrials4SubSample,'Replace',true)',(1:nSubSamples),'UniformOutput',false);
+    subSampleIdxs = arrayfun(@(x) single(datasample(1:numel(xSpkCounts),nTrials4SubSample,'Replace',true)'),(1:nSubSamples),'UniformOutput',false);
     rhoPvalSubSamples = cellfun(@(x) getSpikeCountCorr(xSpkCounts(x),ySpkCounts(x),'Pearson'),subSampleIdxs','UniformOutput',false);
     rhoPvalSubSamples = cell2mat(rhoPvalSubSamples);
-    rhoVecSubSamples = rhoPvalSubSamples(:,1);
+    rhoVecSubSamples = single(rhoPvalSubSamples(:,1));
     % compute mean & sem
     % remove NaNs from computation
     rhoVecSubSamples(isnan(rhoVecSubSamples)) = [];
@@ -251,6 +251,9 @@ function [rhoEst,rhoEstSem,percentileCI,normalCI,subSampleIdxs,rhoVecSubSamples]
     ts = tinv([0.025,0.975],nTrials4SubSample-1);
     normalCI = rhoEst + rhoEstSem*ts;
     percentileCI =  prctile(rhoVecSubSamples,prctileRange); 
+    
+    % change subSampleIdxs to nSubSamples by nTrials4SubSample
+    subSampleIdxs = cell2mat(subSampleIdxs)';
 end
 
 function [cellPairs] = getCrossAreaPairs(pairsFile)
