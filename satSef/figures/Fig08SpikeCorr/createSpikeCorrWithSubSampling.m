@@ -108,8 +108,8 @@ function [spkCorr] = createSpikeCorrWithSubSampling()
     spkCorr = table();
     pctRunOnAll warning off;
     %parfor (cp = 1:nCrossPairs,nThreads)%nCrossPairs
-    %parfor (cp = 1:nCrossPairs,nThreads)%nCrossPairs
-    for (cp = 1:nCrossPairs)%nCrossPairs
+    parfor (cp = 1:nCrossPairs,nThreads)%nCrossPairs
+    %for (cp = 1:nCrossPairs)%nCrossPairs
         %%
         fprintf('doing pair %d\n',cp)
         crossPair = crossPairs(cp,:);
