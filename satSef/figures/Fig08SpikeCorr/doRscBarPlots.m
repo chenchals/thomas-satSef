@@ -6,7 +6,7 @@ fx_ANOVA2_roi = @(levelName1,levelName2,oCome) find(...
     );
 
 groupCols = {'condition','satCondition','outcome'};
-rhocols = {'absRho','absRhoEst40','absRhoEst80'};
+rhocols = {'rho','rhoEst40','rhoEst80'};
 
 %useNeuronType = useNeuronTypes{un};
 if strcmp(useNeuronType,'ALL_NEURONS')
@@ -39,7 +39,7 @@ rscOutcomesStats = sortrows(rscOutcomesStats,{'outcome','satCondition'});
 rscOutcomesStats.Properties.RowNames = {};
 
 %% DO 2-way ANOVA
-anovRes = satAnova(rscData(:,{'absRho','satCondition','outcome'}),'model','interaction',...
+anovRes = satAnova(rscData(:,{'rho','satCondition','outcome'}),'model','interaction',...
     'doMultiCompare',true,...
     'multiCompareDisplay','off',...
     'alpha',0.05);
@@ -70,8 +70,8 @@ allStats.hiCI_80 = temp;
 idxAccu = ismember(rscOutcomesStats.satCondition,'Accurate');
 idxFast = ismember(rscOutcomesStats.satCondition,'Fast');
 
-accuTbl = rscOutcomesStats(idxAccu,{'outcome','mean_absRho','sem_absRho'});
-fastTbl = rscOutcomesStats(idxFast,{'outcome','mean_absRho','sem_absRho'});
+accuTbl = rscOutcomesStats(idxAccu,{'outcome','mean_rho','sem_rho'});
+fastTbl = rscOutcomesStats(idxFast,{'outcome','mean_rho','sem_rho'});
 
 outcomeLabels = accuTbl.outcome;
 roIds = cell2mat(cellfun(@(o) fx_ANOVA2_roi(satConditionByOutcome.levelName1,satConditionByOutcome.levelName2,o),...
@@ -80,15 +80,15 @@ signifStrs = satConditionByOutcome.signifStr(roIds);
 
 
 [barCentersTbl, ~] = plotGroupBarsWithErrors(outcomeLabels,...
-    [accuTbl.mean_absRho fastTbl.mean_absRho],...
-    [accuTbl.sem_absRho fastTbl.sem_absRho],...
+    [accuTbl.mean_rho fastTbl.mean_rho],...
+    [accuTbl.sem_rho fastTbl.sem_rho],...
     signifStrs);
 
 % Add boxes for Confidence interval
 % Acurate_Error_Timing ci/percentile 10/90 for 40 subsamples
 barCenter = barCentersTbl.ErrorTiming(1);
 idx = ismember(rscData.condition,'AccurateErrorTiming');
-ci = getCi(abs(rscData.rhoEst40(idx)));
+ci = getCi((rscData.rhoEst40(idx)));
 overplotBox(barCenter,ci,'k','-');
 idx = ismember(allStats.condition,'AccurateErrorTiming');
 allStats.loCI_40(idx) = ci(1);
@@ -98,7 +98,7 @@ allStats.hiCI_40(idx) = ci(2);
 % Fast_Error_Choice ci/percentile 10/90 for 80 subsamples
 idx = ismember(rscData.condition,'FastErrorChoice');
 barCenter = barCentersTbl.ErrorChoice(2);
-ci = getCi(abs(rscData.rhoEst80(idx)));
+ci = getCi((rscData.rhoEst80(idx)));
 overplotBox(barCenter,ci,'k',':');
 idx = ismember(allStats.condition,'FastErrorChoice');
 allStats.loCI_80(idx) = ci(1);
@@ -107,9 +107,9 @@ allStats.hiCI_80(idx) = ci(2);
 % Accurate_Correct percentile 10/90 for 80 subsamples
 idx = ismember(rscData.condition,'AccurateCorrect');
 barCenter = barCentersTbl.Correct(1);
-ci40 = getCi(abs(rscData.rhoEst40(idx)));
+ci40 = getCi((rscData.rhoEst40(idx)));
 overplotBox(barCenter,ci40,'k','-');
-ci80 = getCi(abs(rscData.rhoEst80(idx)));
+ci80 = getCi((rscData.rhoEst80(idx)));
 overplotBox(barCenter,ci80,'k',':');
 idx = ismember(allStats.condition,'AccurateCorrect');
 allStats.loCI_40(idx) = ci40(1);
@@ -120,9 +120,9 @@ allStats.hiCI_80(idx) = ci80(2);
 % Fast_Correct percentile 10/90 for 80 subsamples
 idx = ismember(rscData.condition,'FastCorrect');
 barCenter = barCentersTbl.Correct(2);
-ci40 = getCi(abs(rscData.rhoEst40(idx)));
+ci40 = getCi((rscData.rhoEst40(idx)));
 overplotBox(barCenter,ci40,'k','-');
-ci80 = getCi(abs(rscData.rhoEst80(idx)));
+ci80 = getCi((rscData.rhoEst80(idx)));
 overplotBox(barCenter,ci80,'k',':');
 idx = ismember(allStats.condition,'FastCorrect');
 allStats.loCI_40(idx) = ci40(1);

@@ -27,13 +27,21 @@ for mon = 1:numel(monkeys)
         useNeuronType = unitTypes{un};
         monkData = rscData(contains(rscData.monkey,monkey(1)),:);
         plotNo = plotNo + 1;
-        subplot(1,nSubplots,plotNo);
-        temp = doRscBarPlots(monkData,monkey,useNeuronType,oExcelFile);
-        if ~isempty(temp)
-        anovaResultTbl.(monkey).(useNeuronType) = temp;
+        subplot(1,nSubplots,plotNo);    
+        if doAbsolute
+            temp = doRscBarPlots(monkData,monkey,useNeuronType,oExcelFile);
+            if ~isempty(temp)
+                anovaResultTbl.(monkey).(useNeuronType) = temp;
+            else
+                plotNo = plotNo - 1;
+            end
         else
-            plotNo = plotNo - 1;
+            for plusMinus = 1:2
+            
+            
+            
         end
+        
     end
 end
 ppretty([8,5],'XMinorTick','off');

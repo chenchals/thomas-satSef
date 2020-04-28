@@ -23,6 +23,8 @@ argParser.addParameter('font',8);
 argParser.addParameter('margin',0.5);
 argParser.addParameter('XMinorTick','on');
 argParser.addParameter('YMinorTick','on');
+argParser.addParameter('PaperOrientation','portrait');
+
 argParser.parse(varargin{:});
 args = argParser.Results;
 
@@ -38,7 +40,7 @@ set(gcf, 'Color', [1.0 1.0 1.0]);
 set(gcf, 'Units', 'inches');
 set(gcf, 'PaperUnits', 'inches');
 set(gcf, 'PaperSize', image_size + [1 1] * 2 * args.margin);
-set(gcf, 'PaperOrientation', 'portrait');
+set(gcf, 'PaperOrientation', args.PaperOrientation);
 
 % Set the position of the figure
 paper_size = get(gcf, 'PaperSize');
