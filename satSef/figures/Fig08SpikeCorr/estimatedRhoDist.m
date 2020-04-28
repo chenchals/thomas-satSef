@@ -56,7 +56,7 @@ end
 satConds = {'Accurate','Fast'};
 outcomes = {'Correct','ErrorChoice','ErrorTiming'};
 crossPairs = unique(spkCorr.Pair_UID);
-for cp = 1:numel(crossPairs) %10
+for cp = 1:18%18:numel(crossPairs) %10
     pairUid = crossPairs{cp};
     oPdfFile = fullfile(oPdfDir,[pairUid '_estimatedRscDistrib.pdf']);
     H_plots = figTemplate();
@@ -84,10 +84,17 @@ for cp = 1:numel(crossPairs) %10
             rawEst40 = spkCorr.rhoVecSubSampl_nTrials_40{idx};
             rawEst80 = spkCorr.rhoVecSubSampl_nTrials_80{idx};
             
+            inCi = spkCorr.rhoRawInCi95_nTrials_40(idx) & spkCorr.rhoRawInCi95_nTrials_80(idx); 
+            if inCi
+                inCiStr = '[in CI]';
+            else
+                inCiStr = '[**NOT in CI**]';
+           end
+            
             sig = spkCorr.signifRaw_05(idx);
             % histogram for random selection of 40/80 trials
             trialBins = 1:spkCorr.nTrials(idx);
-            rhoBins = -0.5:0.01:0.5;
+            rhoBins = -0.6:0.01:0.6;
             cTrials40 = histcounts(trlIdxEst40,'BinEdges',[0.5 trialBins+0.5]);
             cRhoEst40 = histcounts(rawEst40,'BinEdges',[rhoBins(1)-0.005 rhoBins+0.005]);
             cTrials80 = histcounts(trlIdxEst80,'BinEdges',[0.5 trialBins+0.5]);
@@ -118,6 +125,7 @@ for cp = 1:numel(crossPairs) %10
             bar(rhoBins,cRhoEst80,'FaceAlpha',0.4,'EdgeColor','none','HandleVisibility','off')
             xlabel('Estimated Rsc');
             ylabel('count of Rsc')
+            set(gca,'XMinorGrid','on')
             
             % Annotate rho-distribution
             yLim = get(gca,'YLim');
@@ -128,7 +136,8 @@ for cp = 1:numel(crossPairs) %10
             legTxt = {};
             
             plot(obs,yMax*0.9,'*r','MarkerSize',10)
-            legTxt = [legTxt sprintf('\\mu_{obs.} %+0.3f',obs)];
+
+            legTxt = [legTxt sprintf('\\mu_{obs.} %+0.3f %s',obs,inCiStr)];
             plot([est40 est40],yLim,'-b','LineWidth',0.75)
             legTxt = [legTxt sprintf('\\mu_{est40.} %+0.3f',est40)];
             plot([est80 est80],yLim,'--r','LineWidth',1)
@@ -139,7 +148,7 @@ for cp = 1:numel(crossPairs) %10
             legTxt = [legTxt ['CI_{est40.} ' sprintf('%+0.3f ',ci80)]];
 
             set(gca,'YLim',yLim110);             
-            [~,objH] = legend(legTxt,'Location','northeast','Interpreter','tex');
+            [~,objH] = legend(legTxt,'Location','northwest','Interpreter','tex','Box','off');
             objhl = findobj(objH, 'type', 'line'); %// objects of legend of type line
             set(objhl, 'Markersize', 8); %// set marker size as desired
             

@@ -23,40 +23,56 @@ spkCorr.epoch = spkCorr.alignedName;
 %%
 epoch = 'PostSaccade';
 spkCorr = spkCorr(ismember(spkCorr.epoch,epoch),:);
-rscPostSaccade = table();
-rscPostSaccade.monkey = spkCorr.X_monkey;
-rscPostSaccade.Y_area = spkCorr.Y_area;
-rscPostSaccade.condition = spkCorr.condition;
-rscPostSaccade.satCondition = spkCorr.satCondition;
-rscPostSaccade.outcome = spkCorr.outcome;
-rscPostSaccade.epoch = spkCorr.epoch;
-rscPostSaccade.rho = spkCorr.rhoRaw;
-rscPostSaccade.rhoEst40 = spkCorr.rhoEstRaw_nTrials_40;
-rscPostSaccade.rhoEst80 = spkCorr.rhoEstRaw_nTrials_80;
+rscTable = table();
+rscTable.PairUid = spkCorr.Pair_UID;
+rscTable.monkey = spkCorr.X_monkey;
+rscTable.X_area = spkCorr.X_area;
+rscTable.Y_area = spkCorr.Y_area;
+rscTable.condition = spkCorr.condition;
+rscTable.satCondition = spkCorr.satCondition;
+rscTable.outcome = spkCorr.outcome;
+rscTable.epoch = spkCorr.epoch;
+rscTable.rho = spkCorr.rhoRaw;
+rscTable.rhoEst40 = spkCorr.rhoEstRaw_nTrials_40;
+rscTable.rhoEst80 = spkCorr.rhoEstRaw_nTrials_80;
 % add isSefErrorNeuron
-rscPostSaccade.isSefErrorUnit = abs(spkCorr.X_errGrade) > 1 | abs(spkCorr.X_rewGrade) > 1;
+rscTable.isSefErrorUnit = abs(spkCorr.X_errGrade) > 1 | abs(spkCorr.X_rewGrade) > 1;
 warning('off')
-
+%%
+outSpkCorr = table();
+outSpkCorr.PairUid = rscTable.PairUid;
+outSpkCorr.monkey = rscTable.monkey;
+outSpkCorr.unitArea1 = rscTable.X_area;
+outSpkCorr.unitArea2 = rscTable.Y_area;
+outSpkCorr.satCondition = regexprep(rscTable.condition,{'Correct','Error.*'},'');
+outSpkCorr.outcome = regexprep(rscTable.condition,{'Accurate','Fast'},'');
+outSpkCorr.satOutcome = rscTable.condition;
+outSpkCorr.rscObserved = rscTable.rho;
+outSpkCorr.rscEstimated_40RandomTrials = rscTable.rhoEst40;
+outSpkCorr.rscEstimated_80RandomTrials = rscTable.rhoEst80;
+outSpkCorr = sortrows(outSpkCorr,{'unitArea1','unitArea2','outcome','satCondition','rscObserved'});
+oExcelFile = 'fig08_data.xlsx';
+writetable(outSpkCorr,oExcelFile,'UseExcel',true,'Sheet','Rsc_PostSaccade');
 
 %% RSC by Unit Type
 monkeys = {'Da_Eu'};
 errorTypes = {{'ALL_NEURONS','ERROR_NEURONS','OTHER_NEURONS'}};
 pdfFilename = 'fig08_RscByUnitType.pdf';
-fig08RscMonkUnitType(rscPostSaccade,pdfFilename,monkeys,errorTypes,pdfFilename);
+fig08RscMonkUnitType(rscTable,pdfFilename,monkeys,errorTypes,pdfFilename);
 
 %%  by monkey...All neurons
 monkeys = {'Da','Eu'};
 monkUnitTypes = {{'ALL_NEURONS'}
                  {'ALL_NEURONS'}};
 pdfFilename = 'fig08Suppl_RscMonkByAllUnits.pdf';    
-fig08RscMonkUnitType(rscPostSaccade(rscPostSaccade.rho < 0,:),monkeys,monkUnitTypes,pdfFilename);
+fig08RscMonkUnitType(rscTable(rscTable.rho < 0,:),monkeys,monkUnitTypes,pdfFilename);
 
 %%  by monkey...error and other neurons
 monkeys = {'Da','Eu'};
 monkUnitTypes = {{'ERROR_NEURONS','OTHER_NEURONS'}
                  {'ERROR_NEURONS','OTHER_NEURONS'}};
 pdfFilename = 'fig08Suppl_RscMonkByUnitType.pdf';             
-fig08RscMonkUnitType(rscPostSaccade,monkeys,monkUnitTypes,pdfFilename);
+fig08RscMonkUnitType(rscTable,monkeys,monkUnitTypes,pdfFilename);
 
 %% by monkey...FEF and SC pairs with SEF
 %  Da-SEF-FEF, Da-SEF-SC, Eu-SEF-SC, Da_Eu-SEF-SC
@@ -65,7 +81,7 @@ monkUnitTypes = {{'FEF','SC'}
                  {'SC'}
                  {'SC'}};
 pdfFilename = 'fig08Suppl_RscByArea.pdf';
-fig08RscMonkUnitType(rscPostSaccade,monkeys,monkUnitTypes,pdfFilename);
+fig08RscMonkUnitType(rscTable,monkeys,monkUnitTypes,pdfFilename);
 
 %% RSC by monk by area by errorType
 %  Da-SEF-FEF-Error, Da-SEF-FEF-Other
@@ -75,7 +91,7 @@ monkeys = {'Da'};
 unitAreas = {{'FEF','SC'}};
 errorTypes = {{'ERROR_NEURONS','OTHER_NEURONS'}};
 pdfFilename = 'fig08_RscByUnitType.pdf';
-fig08RscMonkUnitType(rscPostSaccade,pdfFilename,'monkeys',monkeys,'unitAreas',unitAreas,'errorTypes',errorTypes);
+fig08RscMonkUnitType(rscTable,pdfFilename,'monkeys',monkeys,'unitAreas',unitAreas,'errorTypes',errorTypes);
 
 end
 % 
@@ -90,6 +106,7 @@ end
 %%
 function [colNames] = getColNamesToUse()
 colNames = {
+    'Pair_UID'
     'X_monkey'
     'X_unit'
     'Y_unit'

@@ -1,4 +1,4 @@
-function [anovaResultTbl] = fig08RscMonkUnitType(rscData, monkeys, cellArrUnitTypes,pdfFilename)
+function [anovaResultTbl] = fig08RscMonkUnitType2(rscData,pdfFilename)
 %FIG08RSCMONKUNITTYPE Summary of this function goes here
 
 figDir = 'fig08_';
