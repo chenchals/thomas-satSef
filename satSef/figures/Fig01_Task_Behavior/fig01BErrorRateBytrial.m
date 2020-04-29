@@ -62,12 +62,61 @@ rtErTbl = sortrows(rtErTbl,{'efficiency','satCondition'},{'descend','descend'});
 %% compute mean and SEM for Reactions and Error Rate table and Plot results
 rtErStatsTbl = grpstats(rtErTbl,{'satCondition','efficiency'},{'mean','sem'});
 rtErStatsTbl = sortrows(rtErStatsTbl,{'efficiency','satCondition'},{'descend','descend'});
+
+%% Fig. 1B
 figure()
-% Efficiency and errorRate
-subplot(1,3,1);
+% ErrorRate +/- SEM errorRate vs ReactionTime
+% Line 1: more efficient [Fast, Accurate]
+% Line 2: less efficient [Fast, Accurate]
+fastClr = [0 100 0]./255;
+accuClr = [255 0 0]./255;
+
+subplot(1,2,1);
 hold on
-idxM=ismember(rtErStatsTbl.efficiency,'MoreEfficient');
-idxL=ismember(rtErStatsTbl.efficiency,'LessEfficient');
+idxM=find(ismember(rtErStatsTbl.efficiency,'MoreEfficient'));
+idxL=find(ismember(rtErStatsTbl.efficiency,'LessEfficient'));
+for ii = 1:2
+    idx = idxM;
+    lw = 0.75;
+    if ii == 2
+        idx = idxL;
+        lw = 1.5;
+    end
+    
+    meanRT = rtErStatsTbl.mean_reactionTime(idx);
+    meanER = rtErStatsTbl.mean_errorRate(idx);
+    semER = rtErStatsTbl.sem_errorRate(idx);
+    plot(meanRT,meanER,'Marker','none','Color','k','LineWidth',lw)
+    errorbar(meanRT(1),meanER(1),semER(1),'Marker','+',...
+        'MarkerSize',8,'MarkerFaceColor',fastClr,'MarkerEdgeColor',fastClr,...
+        'Color',fastClr,'LineWidth',lw,'CapSize',0);
+    errorbar(meanRT(2),meanER(2),semER(2),'Marker','+',...
+        'MarkerSize',8,'MarkerFaceColor',accuClr,'MarkerEdgeColor',accuClr,...
+        'Color',accuClr,'LineWidth',lw,'CapSize',0);
+end
+xlim([245 555]); ylim([.05 .40]);
+xlabel('Reaction time (ms)')
+ylabel('Choice error rate')
+set(gca,'TickDir','out');
+set(gca,'XMinorTick','on')
+set(gca,'YMinorTick','on')
+text(275,0.3,'Fast','Color',fastClr,'FontWeight','bold','FontSize',8);
+text(455,0.3,{'More';'Difficult'},'Color','k','FontWeight','bold','FontSize',8,'HorizontalAlignment','center');
+text(500,0.1,'Accurate','Color',accuClr,'FontWeight','bold','FontSize',8,'HorizontalAlignment','center');
+text(345,0.18,{'Less';'Difficult'},'Color','k','FontWeight','bold','FontSize',8,'HorizontalAlignment','center');
+
+
+
+
+
+
+
+
+
+
+end
+%%
+function [] = unusedFig1B(rtErStatsTbl, idxM, idxL)
 errorbar(rtErStatsTbl.mean_reactionTime(idxM),...
          rtErStatsTbl.mean_errorRate(idxM),...
          rtErStatsTbl.sem_errorRate(idxM),...
@@ -79,8 +128,6 @@ errorbar(rtErStatsTbl.mean_reactionTime(idxL),...
 xlim([245 600]); ylim([.05 .40]);
 xlabel('Reaction time (ms)')
 ylabel('Error rate')
-
-
 % condition and efficiency and reaction time  
 subplot(1,3,2); 
 hold on
@@ -111,9 +158,7 @@ xlim([0.9 2.1]); xticks([1 2]); xticklabels({'Fast','Accurate'})
 xlabel('SAT Condition')
 ylabel('Error rate')
 
-
 end
-
 
 %% Check values with previous code...
 function [] = check(varname2Check,rtErTbl)
