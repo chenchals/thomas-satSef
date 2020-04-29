@@ -60,7 +60,7 @@ if (PLOT)
   subplot(1,3,1); hold on
   errorbarxy([mu.RT_FM mu.RT_AM], [mu.ER_FM mu.ER_AM], [se.RT_FM se.RT_AM], [se.ER_FM se.ER_AM], {'k-','k','k'})
   errorbarxy([mu.RT_FL mu.RT_AL], [mu.ER_FL mu.ER_AL], [se.RT_FL se.RT_AL], [se.ER_FL se.ER_AL], {'k-','k','k'})
-  xlim([245 550]); ylim([.05 .45])
+  xlim([245 600]); ylim([.05 .45])
 
   subplot(1,3,2); hold on
   errorbar([mu.RT_FM mu.RT_AM], [se.RT_FM se.RT_AM], 'CapSize',0, 'LineWidth',1, 'Color','k')

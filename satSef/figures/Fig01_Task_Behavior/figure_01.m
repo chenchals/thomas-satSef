@@ -3,7 +3,6 @@ function [] = figure_01()
 % needs Behavior data
 % see also FIG01B_PLOT_ERRRATE_X_RT, 
 %          FIG01C_PLOT_BEHAV_X_TRIAL, 
-%          GETOPT,
 %          PPRETTY
 % Needs behavior data
 %%
