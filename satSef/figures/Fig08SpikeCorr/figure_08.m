@@ -39,6 +39,10 @@ rscTable.rhoEst80 = spkCorr.rhoEstRaw_nTrials_80;
 rscTable.isSefErrorUnit = abs(spkCorr.X_errGrade) > 1 | abs(spkCorr.X_rewGrade) > 1;
 rscTable.sefVisGrade = spkCorr.X_visGrade;
 rscTable.sefMoveGrade = spkCorr.X_moveGrade;
+rscTable.isSefUnitVis = spkCorr.X_visGrade > 1 & spkCorr.X_moveGrade == 0;
+rscTable.isSefUnitMove = spkCorr.X_visGrade == 0 & spkCorr.X_moveGrade > 1;
+rscTable.isSefUnitVisMove = spkCorr.X_visGrade > 1 & spkCorr.X_moveGrade > 1;
+rscTable.isSefUnitOther = spkCorr.X_visGrade <= 1 | spkCorr.X_moveGrade <= 1;
 warning('off')
 %%
 outSpkCorr = table();
@@ -48,7 +52,11 @@ outSpkCorr.unitArea1 = rscTable.X_area;
 outSpkCorr.unitArea2 = rscTable.Y_area;
 outSpkCorr.sefVisGrade = rscTable.sefVisGrade;
 outSpkCorr.sefMoveGrade = rscTable.sefMoveGrade;
-outSpkCorr.isSefErrorUnit = rscTable.isSefErrorUnit; 
+outSpkCorr.isSefErrorUnit = rscTable.isSefErrorUnit;
+outSpkCorr.isSefUnitVis = rscTable.isSefUnitVis;
+outSpkCorr.isSefUnitMove = rscTable.isSefUnitMove;
+outSpkCorr.isSefUnitVisMove = rscTable.isSefUnitVisMove;
+outSpkCorr.isSefUnitOther = rscTable.isSefUnitOther;
 outSpkCorr.satCondition = regexprep(rscTable.condition,{'Correct','Error.*'},'');
 outSpkCorr.outcome = regexprep(rscTable.condition,{'Accurate','Fast'},'');
 outSpkCorr.satOutcome = rscTable.condition;
@@ -65,83 +73,41 @@ writetable(outSpkCorr,oExcelFile,'UseExcel',true,'Sheet','Rsc_PostSaccade');
 % Only Rsc values > 0 for monkeys combined and separate, for error, and non-error neurons
 % Only Rsc values < 0 for monkeys combined and separate, for error, and non-error neurons
 % 
-%% RSC by Error Type
+%% [Absolute|Signed|Positive|Negative] Rsc bar plots for error/non-error by monks
 useMonkeys = {'Da_Eu','Da','Eu'};
 useErrorTypes = {{'ALL_NEURONS','ERROR_NEURONS','OTHER_NEURONS'}};
-for m = 1:numel(useMonkeys)
-    monkeys = useMonkeys(m);
-    errorTypes = useErrorTypes;
-    pdfFilename = ['fig08_Rsc_ErrNoError_' monkeys{1} '.pdf'];
-    fig08RscMonkUnitType(rscTable,monkeys,errorTypes,pdfFilename,['Signed Rho - ' monkeys{1}]);
+rhoTypes = {'Absolute','Signed','Positive','Negative'};
+for rt = 1:numel(rhoTypes)
+    rhoType = rhoTypes{rt};
+    evalin('base','addCiBox = false;')
+    doBarplotAndAnovaFor(rscTable,rhoType,useMonkeys,useErrorTypes)
+    evalin('base','addCiBox = true;')
+    doBarplotAndAnovaFor(rscTable,rhoType,useMonkeys,useErrorTypes)
 end
-%% Absolute TRsc by error type
+
+%% [Absolute|Signed|Positive|Negative] Rsc bar plots for FEF/SC pairs by monks
 useMonkeys = {'Da_Eu','Da','Eu'};
-useErrorTypes = {{'ALL_NEURONS','ERROR_NEURONS','OTHER_NEURONS'}};
-temp = rscTable;
-temp.rho = abs(temp.rho);
-temp.rhoEst40 = abs(temp.rhoEst40);
-temp.rhoEst80 = abs(temp.rhoEst80);
-for m = 1:numel(useMonkeys)
-    monkeys = useMonkeys(m);
-    errorTypes = useErrorTypes;
-    pdfFilename = ['fig08_RscAbsolute_ErrNoError_' monkeys{1} '.pdf'];
-    fig08RscMonkUnitType(temp,monkeys,errorTypes,pdfFilename,['Absolute Rho - ' monkeys{1}]);
+useAreaTypes = {{'ALL_NEURONS','FEF','SC'}};
+rhoTypes = {'Absolute','Signed','Positive','Negative'};
+for rt = 1:numel(rhoTypes)
+    rhoType = rhoTypes{rt};
+    evalin('base','addCiBox = false;')
+    doBarplotAndAnovaFor(rscTable,rhoType,useMonkeys,useAreaTypes)
+    evalin('base','addCiBox = true;')
+    doBarplotAndAnovaFor(rscTable,rhoType,useMonkeys,useAreaTypes)
 end
 
-%% Positive Rsc
+%% [Absolute|Signed|Positive|Negative] Rsc bar plots for Vis/Mov/VisMove/Other by monks
 useMonkeys = {'Da_Eu','Da','Eu'};
-useErrorTypes = {{'ALL_NEURONS','ERROR_NEURONS','OTHER_NEURONS'}};
-tempRscTbl = rscTable(rscTable.rho > 0,:);
-for m = 1:numel(useMonkeys)
-    monkeys = useMonkeys(m);
-    errorTypes = useErrorTypes;
-    pdfFilename = ['fig08_RscPlus_ErrNoError_' monkeys{1} '.pdf'];
-    fig08RscMonkUnitType(tempRscTbl,monkeys,errorTypes,pdfFilename,['Positive Rho - ' monkeys{1}]);
+useFuncTypes = {{'ALL_NEURONS','VIS','MOV','VISMOV','OTHER'}};
+rhoTypes = {'Absolute','Signed','Positive','Negative'};
+for rt = 1:numel(rhoTypes)
+    rhoType = rhoTypes{rt};
+    evalin('base','addCiBox = false;')
+    doBarplotAndAnovaFor(rscTable,rhoType,useMonkeys,useFuncTypes)
+    evalin('base','addCiBox = true;')
+    doBarplotAndAnovaFor(rscTable,rhoType,useMonkeys,useFuncTypes)
 end
-%% Negative Rsc
-useMonkeys = {'Da_Eu','Da','Eu'};
-useErrorTypes = {{'ALL_NEURONS','ERROR_NEURONS','OTHER_NEURONS'}};
-tempRscTbl = rscTable(rscTable.rho < 0,:);
-for m = 1:numel(useMonkeys)
-    monkeys = useMonkeys(m);
-    errorTypes = useErrorTypes;
-    pdfFilename = ['fig08_RscMinus_ErrNoError_' monkeys{1} '.pdf'];
-    fig08RscMonkUnitType(tempRscTbl,monkeys,errorTypes,pdfFilename,['Negative Rho - ' monkeys{1}]);
-end
-
-%%
-% %%  by monkey...All neurons
-% monkeys = {'Da','Eu'};
-% monkUnitTypes = {{'ALL_NEURONS'}
-%                  {'ALL_NEURONS'}};
-% pdfFilename = 'fig08Suppl_RscMonkByAllUnits.pdf';    
-% fig08RscMonkUnitType(rscTable(rscTable.rho < 0,:),monkeys,monkUnitTypes,pdfFilename);
-% 
-% %%  by monkey...error and other neurons
-% monkeys = {'Da','Eu'};
-% monkUnitTypes = {{'ERROR_NEURONS','OTHER_NEURONS'}
-%                  {'ERROR_NEURONS','OTHER_NEURONS'}};
-% pdfFilename = 'fig08Suppl_RscMonkByUnitType.pdf';             
-% fig08RscMonkUnitType(rscTable,monkeys,monkUnitTypes,pdfFilename);
-% 
-% %% by monkey...FEF and SC pairs with SEF
-% %  Da-SEF-FEF, Da-SEF-SC, Eu-SEF-SC, Da_Eu-SEF-SC
-% monkeys = {'Da','Eu','Da_Eu'};
-% monkUnitTypes = {{'FEF','SC'}
-%                  {'SC'}
-%                  {'SC'}};
-% pdfFilename = 'fig08Suppl_RscByArea.pdf';
-% fig08RscMonkUnitType(rscTable,monkeys,monkUnitTypes,pdfFilename);
-
-%% RSC by monk by area by errorType
-%  Da-SEF-FEF-Error, Da-SEF-FEF-Other
-%  Da-SEF-SC-Error, Da-SEF-SC-Other
-
-% monkeys = {'Da'};
-% unitAreas = {{'FEF','SC'}};
-% errorTypes = {{'ERROR_NEURONS','OTHER_NEURONS'}};
-% pdfFilename = 'fig08_RscByUnitType.pdf';
-% fig08RscMonkUnitType(rscTable,pdfFilename,'monkeys',monkeys,'unitAreas',unitAreas,'errorTypes',errorTypes);
 
 end
 % 
@@ -153,6 +119,47 @@ end
 
 
 %%
+function [] = doBarplotAndAnovaFor(rscTable,rhoType,useMonkeys,useUnitTypes)
+% rhoType: [Absolute|Signed|Positive|Negative] 
+if sum(contains(useUnitTypes{:},'ERROR')) > 0 
+    midfix = 'ErrNoErr_'; 
+elseif sum(strcmpi(useUnitTypes{:},'FEF')) > 0 || sum(strcmpi(useUnitTypes{:},'SC')) > 0
+    midfix = 'FefSc_';
+elseif sum(strcmpi(useUnitTypes{:},'VIS')) > 0 || sum(strcmpi(useUnitTypes{:},'MOV')) > 0
+    midfix = 'VisMov_';
+end
+
+switch rhoType
+    case 'Absolute'
+        rscTable.rho = abs(rscTable.rho);
+        rscTable.rhoEst40 = abs(rscTable.rhoEst40);
+        rscTable.rhoEst80 = abs(rscTable.rhoEst80);
+        basePdfFile = ['absoluteRsc_' midfix];
+        titlePrefix = 'Absolute Rsc - ';
+    case 'Signed'
+        % No changes use Rho values as is
+        basePdfFile = ['signedRsc_' midfix];
+        titlePrefix = 'Signed Rsc - ';
+    case 'Positive'
+        rscTable = rscTable(rscTable.rho > 0,:);
+        basePdfFile = ['positiveRsc_' midfix];
+        titlePrefix = 'Positive Rsc - ';
+    case 'Negative'        
+        rscTable = rscTable(rscTable.rho < 0,:);
+        basePdfFile = ['negativeRsc_' midfix];
+        titlePrefix = 'Negative Rsc - ';
+end
+
+for m = 1:numel(useMonkeys)
+    monkeys = useMonkeys(m);
+    unitTypes = useUnitTypes;
+    pdfFilename = [basePdfFile monkeys{1} '.pdf'];
+    fig08RscMonkUnitType(rscTable,monkeys,unitTypes,pdfFilename,[titlePrefix monkeys{1}]);
+    close all
+end
+
+end
+
 %%
 function [colNames] = getColNamesToUse()
 colNames = {

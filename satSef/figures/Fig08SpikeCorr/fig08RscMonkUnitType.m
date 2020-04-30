@@ -29,9 +29,10 @@ for oF = oFiles
 end
 
 anovaResultTbl = struct();
-figure
+%figure
 nSubplots = sum(cellfun(@(x) numel(x),cellArrUnitTypes));
 plotNo = 0;
+H_axes = figTemplate(1,nSubplots);
 for mon = 1:numel(monkeys)
     monkey = monkeys{mon};
     if strcmp(monkey,'Da_Eu')
@@ -44,7 +45,10 @@ for mon = 1:numel(monkeys)
         useNeuronType = unitTypes{un};
         monkData = rscData(monkIdx,:);
         plotNo = plotNo + 1;
-        subplot(1,nSubplots,plotNo);
+        
+        %subplot(1,nSubplots,plotNo);
+        axes(H_axes(plotNo));
+        
         temp = doRscBarPlots(monkData,monkey,useNeuronType,oExcelFile);
         if ~isempty(temp)
             anovaResultTbl.(monkey).(useNeuronType) = temp;
@@ -55,12 +59,31 @@ for mon = 1:numel(monkeys)
 end
 gcf;
 ha = annotation('textbox','String',titleStr,...
-                 'Position',[0.25,0.95,0.50,0.05],...
-                  'HorizontalAlignment','center','LineStyle','none',...
-                 'Interpreter','none','FontWeight','bold');
-ppretty([8,5],'XMinorTick','off');
+    'Position',[0.25,0.92,0.50,0.05],...
+    'HorizontalAlignment','left','LineStyle','none',...
+    'Interpreter','none','FontWeight','bold','FontSize',12);
 
-print(oPdfFile,'-dpdf')
-save(oMatFile,'-v7.3','-struct','anovaResultTbl');
+set(H_axes,'Box','off','TickDir','out','XMinorTick','off','YMinorTick','on');
 
+set(gcf,'Position',[120 120 1400 900]);
+set(gcf,'PaperOrientation','landscape')
+drawnow
+saveFigPdf(oPdfFile);
+             
+%ppretty([9,6],'XMinorTick','off','PaperOrientation','landscape');
+%print(oPdfFile,'-dpdf')
+%save(oMatFile,'-v7.3','-struct','anovaResultTbl');
+
+end
+
+
+function [hA] = figTemplate(ros,cols)
+%%
+figure;
+set(gcf,'Color',[1 1 1]);
+hA = tight_subplot(ros, cols, [.05 .05],[0.05 0.08],[0.05 0.05]);
+for ii = 1:numel(hA)
+    axes(hA(ii))
+    title(sprintf('Plot %d',ii));
+end
 end

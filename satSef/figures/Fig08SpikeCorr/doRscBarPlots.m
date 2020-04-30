@@ -25,6 +25,18 @@ elseif strcmp(useNeuronType,'FEF')
 elseif strcmp(useNeuronType,'SC')
     idxRos = ismember(rscData.Y_area, useNeuronType);
     titleStr = 'SEF-SC';
+elseif strcmp(useNeuronType,'VIS')
+    idxRos = rscData.isSefUnitVis;
+    titleStr = 'SEF-Vis Unit';
+elseif strcmp(useNeuronType,'MOV')
+    idxRos = rscData.isSefUnitMove;
+    titleStr = 'SEF-Move Unit';
+elseif strcmp(useNeuronType,'VISMOV')
+    idxRos = rscData.isSefUnitVisMove;
+    titleStr = 'SEF-VisMov Unit';
+elseif strcmp(useNeuronType,'OTHER')
+    idxRos = rscData.isSefUnitOther;
+    titleStr = 'SEF-Other Unit';
 end
 
 if sum(idxRos) == 0
