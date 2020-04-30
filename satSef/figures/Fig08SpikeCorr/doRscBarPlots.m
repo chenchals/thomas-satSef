@@ -7,6 +7,7 @@ fx_ANOVA2_roi = @(levelName1,levelName2,oCome) find(...
 
 groupCols = {'condition','satCondition','outcome'};
 rhocols = {'rho','rhoEst40','rhoEst80'};
+allOutcomes = {'Correct','ErrorChoice','ErrorTiming'};
 
 %useNeuronType = useNeuronTypes{un};
 if strcmp(useNeuronType,'ALL_NEURONS')
@@ -39,6 +40,9 @@ rscOutcomesStats = sortrows(rscOutcomesStats,{'outcome','satCondition'});
 rscOutcomesStats.Properties.RowNames = {};
 
 %% DO 2-way ANOVA
+% sort so that the satCondition_outcome table has predictable leveName1 and
+% levelName2
+rscData = sortrows(rscData,{'satCondition','outcome'});
 anovRes = satAnova(rscData(:,{'rho','satCondition','outcome'}),'model','interaction',...
     'doMultiCompare',true,...
     'multiCompareDisplay','off',...
@@ -73,6 +77,27 @@ idxFast = ismember(rscOutcomesStats.satCondition,'Fast');
 accuTbl = rscOutcomesStats(idxAccu,{'outcome','mean_rho','sem_rho'});
 fastTbl = rscOutcomesStats(idxFast,{'outcome','mean_rho','sem_rho'});
 
+% 04/30: Check if each SAT condition has all 3 outcomes
+% 1. ensure outcome column is sorted as in allOutcomes
+% 2. Insert NaNs for an outcome not present for sat condition
+temp = cell2table(allOutcomes','VariableNames',{'outcome'});
+accuTbl = outerjoin(temp,accuTbl,'LeftVariables','outcome','RightVariables',{'mean_rho','sem_rho'});
+fastTbl = outerjoin(temp,fastTbl,'LeftVariables','outcome','RightVariables',{'mean_rho','sem_rho'});
+
+
+% % temp = setdiff(allOutcomes,accuTbl.outcome);
+% % if ~isempty(temp)
+% %     accuTbl.outcome(3) = temp;
+% %     accuTbl.mean_rho(3) = NaN;
+% %     accuTbl.sem_rho(3) = NaN;
+% % end
+% % temp = setdiff(allOutcomes,fastTbl.outcome);
+% % if ~isempty(temp)
+% %     fastTbl.outcome(3) = temp;
+% %     fastTbl.mean_rho(3) = NaN;
+% %     fastTbl.sem_rho(3) = NaN;
+% % end
+
 outcomeLabels = accuTbl.outcome;
 roIds = cell2mat(cellfun(@(o) fx_ANOVA2_roi(satConditionByOutcome.levelName1,satConditionByOutcome.levelName2,o),...
     outcomeLabels,'UniformOutput',false));
@@ -93,7 +118,6 @@ overplotBox(barCenter,ci,'k','-');
 idx = ismember(allStats.condition,'AccurateErrorTiming');
 allStats.loCI_40(idx) = ci(1);
 allStats.hiCI_40(idx) = ci(2);
-
 
 % Fast_Error_Choice ci/percentile 10/90 for 80 subsamples
 idx = ismember(rscData.condition,'FastErrorChoice');
@@ -130,6 +154,8 @@ allStats.hiCI_40(idx) = ci40(2);
 allStats.loCI_80(idx) = ci80(1);
 allStats.hiCI_80(idx) = ci80(2);
 
+% Do this after plotting the CI box, as it alters the y-scale
+addSignifStrs(outcomeLabels,signifStrs);
 title([monkey '--' titleStr],'FontWeight','bold','Interpreter','none');
 drawnow
 
@@ -138,18 +164,47 @@ anovaResultTbl.satConditionByOutcome = satConditionByOutcome;
 anovaResultTbl.anovaTbl = anovaTbl;
 anovaResultTbl.allStats = allStats;
 
-% write output to excel file
-writeToExcel = false;
-if writeToExcel
-    sheetName_prefix = [monkey useNeuronType]; %#ok<UNRCH>
-    writetable(anovaTbl,oExcelFile,'UseExcel',true,'Sheet',[sheetName_prefix '_anova']);
-    writetable(satConditionByOutcome,oExcelFile,'UseExcel',true,'Sheet',[sheetName_prefix '_Interaction']);
-    writetable(allStats,oExcelFile,'UseExcel',true,'Sheet',[sheetName_prefix '_Stats']);
+sheetName_prefix = [monkey useNeuronType]; %#ok<UNRCH>
+writetable(anovaTbl,oExcelFile,'UseExcel',true,'Sheet',[sheetName_prefix '_anova']);
+writetable(satConditionByOutcome,oExcelFile,'UseExcel',true,'Sheet',[sheetName_prefix '_Interaction']);
+writetable(allStats,oExcelFile,'UseExcel',true,'Sheet',[sheetName_prefix '_Stats']);
+
+
 end
 
+
+function [] = addSignifStrs(cellArrCategories,cellArrSignifStr)
+    % add significance strings to the plot 
+    if ~isempty(cellArrSignifStr) && numel(cellArrCategories) == numel(cellArrSignifStr)
+        txt = {sprintf('%8s','signif.')};
+        for ii = 1:numel(cellArrCategories)
+            t = regexprep(cellArrCategories{ii},'[a-z]','');
+            txt = [txt;{sprintf('%4s  %s',t,cellArrSignifStr{ii})}]; %#ok<AGROW>
+        end       
+    end
+    
+    % 04/30: vary text position based on scale
+    yLim = get(gca,'YLim');
+    ha = 'left';
+    if abs(yLim(1)) > abs(yLim(2)) % plot is negative
+        yPos = yLim(1)*0.95;
+        va = 'bottom';
+    else
+        yPos = yLim(2)*0.95;
+        va = 'top';
+    end    
+    h_txt = text(0.75,yPos,txt,'FontSize',7,'VerticalAlignment',va,'HorizontalAlignment',ha);
 end
 
 function [pH] = overplotBox(barCenter,yBeginEnd,edgeColor,lineStyle)
+doCiBox = true;
+if evalin('base','exist(''addCiBox'',''var'')')
+    doCiBox = evalin('base','addCiBox');
+end
+if ~doCiBox
+    pH = [];
+    return;
+end
 xBeginEnd = barCenter + [-0.125 0.125];
 xVec = [xBeginEnd fliplr(xBeginEnd)];
 yVec = [yBeginEnd;yBeginEnd];
@@ -158,8 +213,8 @@ pH = patch(xVec,yVec,[1 1 1],'FaceAlpha',0.0);
 set(pH,'EdgeColor',edgeColor)
 set(pH,'LineStyle',lineStyle)
 set(pH,'LineWidth',0.5)
-
 end
+
 function [normCi] = getCi(vec)
 vecMean = nanmean(vec);
 vecSem = nanstd(vec)/sqrt(numel(vec));

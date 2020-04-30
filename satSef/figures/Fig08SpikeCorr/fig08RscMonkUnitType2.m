@@ -1,5 +1,13 @@
-function [anovaResultTbl] = fig08RscMonkUnitType2(rscData,pdfFilename)
+function [anovaResultTbl] = fig08RscMonkUnitType2(rscData,pdfFilename,varargin)
 %FIG08RSCMONKUNITTYPE Summary of this function goes here
+
+argParser = inputParser();
+argParser.addParameter('monkeys',{'Da_Eu'});
+argParser.addParameter('errorTypes',{'ALL'});
+argParser.addParameter('pairedAreas',{'ALL'}); % not used
+% parse input varargin
+argParser.parse(varargin{:});
+args = argParser.Results;
 
 figDir = 'fig08_';
 if ~exist(figDir,'dir')
@@ -16,13 +24,17 @@ for oF = oFiles
     end
 end
 
+monkeys = args.monkeys;
+unitTypes = args.errorTypes;
+pairedAreas = args.pairedAreas;
+nSubplots = sum(cellfun(@(x) numel(x),unitTypes));
+
 anovaResultTbl = struct();
 figure
-nSubplots = sum(cellfun(@(x) numel(x),cellArrUnitTypes));
 plotNo = 0;
 for mon = 1:numel(monkeys)
     monkey = monkeys{mon};
-    unitTypes = cellArrUnitTypes{mon};
+    unitTypes = unitTypes{mon};
     for un = 1:numel(unitTypes)
         useNeuronType = unitTypes{un};
         monkData = rscData(contains(rscData.monkey,monkey(1)),:);
