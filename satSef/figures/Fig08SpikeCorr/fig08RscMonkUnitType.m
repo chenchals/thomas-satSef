@@ -8,9 +8,9 @@ if evalin('base','exist(''addCiBox'',''var'')')
     doCiBox = evalin('base','addCiBox');
 end
 if doCiBox
-    figDir = 'fig08_With_CI_Box';
+    figDir = '_fig08_With_CI_Box';
 else
-    figDir = 'fig08_No_CI_Box';
+    figDir = '_fig08_No_CI_Box';
 
 end
 
@@ -59,19 +59,16 @@ for mon = 1:numel(monkeys)
 end
 gcf;
 ha = annotation('textbox','String',titleStr,...
-    'Position',[0.25,0.92,0.50,0.05],...
+    'Position',[0.25,0.95,0.50,0.05],...
     'HorizontalAlignment','left','LineStyle','none',...
     'Interpreter','none','FontWeight','bold','FontSize',12);
-
 set(H_axes,'Box','off','TickDir','out','XMinorTick','off','YMinorTick','on');
-
 set(gcf,'Position',[120 120 1400 900]);
 set(gcf,'PaperOrientation','landscape')
+ppretty([5 7],'XMinorTick','off')
 drawnow
-saveFigPdf(oPdfFile);
-             
-%ppretty([9,6],'XMinorTick','off','PaperOrientation','landscape');
-%print(oPdfFile,'-dpdf')
+print(oPdfFile,'-dpdf')
+
 %save(oMatFile,'-v7.3','-struct','anovaResultTbl');
 
 end
@@ -81,7 +78,7 @@ function [hA] = figTemplate(ros,cols)
 %%
 figure;
 set(gcf,'Color',[1 1 1]);
-hA = tight_subplot(ros, cols, [.05 .05],[0.05 0.08],[0.05 0.05]);
+hA = tight_subplot(ros, cols, [.08 .08],[0.1 0.1],[0.1 0.1]);
 for ii = 1:numel(hA)
     axes(hA(ii))
     title(sprintf('Plot %d',ii));
