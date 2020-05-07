@@ -1,26 +1,36 @@
 
 % see: https://www.r-graph-gallery.com/323-sankey-diagram-with-the-networkd3-library.html
 % data from the url 'https://cdn.rawgit.com/christophergandrud/networkD3/master/JSONdata/energy.json'
-% txt is a struct
-txt = webread('https://cdn.rawgit.com/christophergandrud/networkD3/master/JSONdata/energy.json');
+% txt is a struct --> Find what is the struct, and organize your data
+% similarly
+% txt = webread('https://cdn.rawgit.com/christophergandrud/networkD3/master/JSONdata/energy.json');
 
 % Read Rsc Data for PostSaccade from excel file
 rscData = readtable('fig08_data.xlsx');
+%%
+sank = getSankeyDataAccuFastErrorTiming(rscData);
+% write json file
+fid = fopen('satSef/figures/Fig08SpikeCorr/testSankey/sankErrorTimingAccuErrorOtherFast.json','w');
+fwrite(fid,jsonencode(sank));
+fclose(fid);
+%%
 
-
+%%
+function [sankeyData] = getSankeyDataAccuFastErrorTiming(rscData)
 outcome = 'ErrorTiming';
 idx = ismember(rscData.outcome,outcome);
 myData = rscData(idx,:);
 % code Rsc sign: 1 = negative; 2 = positive
 myData.codedSign(myData.rscObserved < 0) = 1;
 myData.codedSign(myData.rscObserved > 0) = 2;
-% separate FAST and ACCURATE
+% separate FAST a nd ACCURATE
 fastTbl = myData(ismember(myData.satCondition,'Fast'),{'PairUid','isSefErrorUnit','codedSign','rscObserved'});
 accuTbl = myData(ismember(myData.satCondition,'Accurate'),{'PairUid','isSefErrorUnit','codedSign','rscObserved'});
 
 temp = outerjoin(accuTbl,fastTbl,'LeftKeys',{'PairUid'},'RightKeys',{'PairUid'});
 fastAccuTbl = table();
 fastAccuTbl.PairUid = temp.PairUid_accuTbl;
+
 % code SEF node name
 idx = temp.isSefErrorUnit_accuTbl==1;
 fastAccuTbl.sefErrorTye = repmat({''},size(temp,1),1);
@@ -49,9 +59,9 @@ fastAccuTbl = sortrows(fastAccuTbl,{'sefErrorTye','codedSignSum2Sort','codedSign
 % nodes: (Left) Accu Positive, Accu Negative, 
 %       (Middle) SEF ErrorNeurons, SEF OtherNeurons, 
 %       (Right) Fast Positive, Fast Negative
-sank = struct();
+sankeyData = struct();
 nodeNames = unique([fastAccuTbl.AccuRhoSign;fastAccuTbl.sefErrorTye;fastAccuTbl.FastRhoSign],'stable')';
-sank.nodes = cell2struct(nodeNames,'name',1);
+sankeyData.nodes = cell2struct(nodeNames,'name',1);
 sourceTarget = {{'AccuMinus','SEF-Error'}
                 {'AccuMinus','SEF-Other'}
                 {'AccuPlus','SEF-Error'}
@@ -82,12 +92,5 @@ for l = 1:numel(sourceTarget)
     links(l,1).rhoValMean = rhoVal; 
     
 end
-sank.links=links;
-
-% write json file
-fid = fopen('satSef/figures/Fig08SpikeCorr/testSankey/connErrorOther.json','w');
-fwrite(fid,jsonencode(sank));
-fclose(fid);
-
-
-%%
+sankeyData.links=links;
+end

@@ -18,7 +18,7 @@ library(networkD3)
 # p
 
 
-conns <- jsonlite::fromJSON("connErrorOther.json")
+conns <- jsonlite::fromJSON("sankErrorTimingAccuErrorOtherFast.json")
 
 p1 <- sankeyNetwork(Links = conns$links, Nodes = conns$nodes, Source = "source",
                    Target = "target", Value = "counts", NodeID = "name",
