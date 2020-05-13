@@ -22,10 +22,10 @@ spkCorr.minusRho(spkCorr.rhoRaw < 0) = 1;
 % Considering ONLY SEF error (choice + timing) neurons, and ONLY those with
 % stat signif correlation values, for each session draw a diagram like that
 % below.  Significant correlations will be referred to as ?connections?  
-idxPlus = spkCorr.isSefErrorUnit == 1 ...
+idxErr = spkCorr.isSefErrorUnit == 1 ...
       & ismember(spkCorr.outcome,{'ErrorChoice','ErrorTiming'}) ...
       & spkCorr.signifRaw_05 == 1; 
-spkCorr = spkCorr(idxPlus,{'X_monkey','X_sess','satCondition','outcome','X_unitNum','Y_area','plusRho','minusRho'});
+spkCorr = spkCorr(idxErr,{'X_monkey','X_sess','satCondition','outcome','X_unitNum','Y_area','plusRho','minusRho'});
 spkCorr = sortrows(spkCorr,{'X_unitNum','satCondition','outcome','Y_area','plusRho','minusRho'});
 
 %% For each SEF error unit, find how many FEF or SC units they are connected to
@@ -38,9 +38,13 @@ for sc = 1:numel(satConds)
     for oc = 1:numel(outcomes)
         connGraph = emptyGraph;
         outcome = outcomes{oc};
-        idxPlus = ismember(spkCorr.satCondition,satCondition) ...
-            & contains(outcome,spkCorr.outcome);
-        countTbl = spkCorr(idxPlus,{'X_unitNum','Y_area','plusRho','minusRho'});
+        idxSat = ismember(spkCorr.satCondition,satCondition);
+        if strcmp(outcome,'ErrorChoice_ErrorTiming')
+            idxOutcome = ones(size(spkCorr,1),1);
+        else
+            idxOutcome = ismember(spkCorr.outcome,outcome);
+        end
+        countTbl = spkCorr(idxSat & idxOutcome,{'X_unitNum','Y_area','plusRho','minusRho'});
         sumTbl = grpstats(countTbl,{'X_unitNum','Y_area'},{'sum'});
         
         sefErrUnits = unique(sumTbl.X_unitNum,'stable');
@@ -211,6 +215,9 @@ end
 %%
 function [h_graph] = plotGraph(objGr)
 %lw = scaleVector(objGr.Edges.Weight,1,10);
+% remoce all edges with 0 weight (ie no connections)
+inValidEdgeIdx = find(objGr.Edges.Weight == 0);
+objGr = objGr.rmedge(inValidEdgeIdx); %#ok<FNDSB>
 lw = objGr.Edges.Weight;
 h_graph = plot(objGr,'XData',objGr.Nodes.xPos,'YData',objGr.Nodes.yPos,...
     'LineStyle',objGr.Edges.lineStyle,...
