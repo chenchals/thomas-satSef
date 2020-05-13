@@ -33,6 +33,8 @@ rscTable.satCondition = spkCorr.satCondition;
 rscTable.outcome = spkCorr.outcome;
 rscTable.epoch = spkCorr.epoch;
 rscTable.rho = spkCorr.rhoRaw;
+rscTable.pval = spkCorr.pvalRaw;
+rscTable.signif_05 = spkCorr.signifRaw_05;
 rscTable.rhoEst40 = spkCorr.rhoEstRaw_nTrials_40;
 rscTable.rhoEst80 = spkCorr.rhoEstRaw_nTrials_80;
 % add isSefErrorNeuron
@@ -61,6 +63,8 @@ outSpkCorr.satCondition = regexprep(rscTable.condition,{'Correct','Error.*'},'')
 outSpkCorr.outcome = regexprep(rscTable.condition,{'Accurate','Fast'},'');
 outSpkCorr.satOutcome = rscTable.condition;
 outSpkCorr.rscObserved = rscTable.rho;
+outSpkCorr.pvalObserved = rscTable.pval;
+outSpkCorr.signif05 = rscTable.signif_05;
 outSpkCorr.rscEstimated_40RandomTrials = rscTable.rhoEst40;
 outSpkCorr.rscEstimated_80RandomTrials = rscTable.rhoEst80;
 outSpkCorr = sortrows(outSpkCorr,{'unitArea1','unitArea2','outcome','satCondition','rscObserved'});
@@ -181,6 +185,7 @@ colNames = {
     'alignedName'
     'nTrials'
     'rhoRaw'
+    'pvalRaw'
     'signifRaw_05'
     'rhoEstRaw_nTrials_40'
     'rhoEstSem_nTrials_40'

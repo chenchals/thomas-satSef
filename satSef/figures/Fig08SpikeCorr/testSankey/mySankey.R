@@ -20,11 +20,19 @@ library(networkD3)
 
 conns <- jsonlite::fromJSON("sankErrorTimingAccuErrorOtherFast.json")
 
+conns$links$value <- conns$links$counts/sum(conns$links$counts)
+conns$links$linkColor <- c("Minus","Minus","Plus","Plus","Minus","Minus","Plus","Plus")
+
+conns$links$absMean <- abs(conns$links$rhoValMean)
+
+
 p1 <- sankeyNetwork(Links = conns$links, Nodes = conns$nodes, Source = "source",
                    Target = "target", Value = "counts", NodeID = "name",
-                   units = "TWh", fontSize = 12, nodeWidth = 30)
+                   fontSize = 12, nodeWidth = 10,LinkGroup = "linkColor")
 p1
 
+
+p2
 
 
 # save the widget

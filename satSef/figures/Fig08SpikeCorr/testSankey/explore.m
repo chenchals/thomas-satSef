@@ -8,7 +8,7 @@
 % Read Rsc Data for PostSaccade from excel file
 rscData = readtable('fig08_data.xlsx');
 %%
-sank = getSankeyDataAccuFastErrorTiming(rscData);
+sank = getSankeyDataAccuFastErrorTiming(rscData,[]);
 % write json file
 fid = fopen('satSef/figures/Fig08SpikeCorr/testSankey/sankErrorTimingAccuErrorOtherFast.json','w');
 fwrite(fid,jsonencode(sank));
@@ -16,16 +16,16 @@ fclose(fid);
 %%
 
 %%
-function [sankeyData] = getSankeyDataAccuFastErrorTiming(rscData)
+function [sankeyData] = getSankeyDataAccuFastErrorTiming(rscData,useSignif)
 outcome = 'ErrorTiming';
 idx = ismember(rscData.outcome,outcome);
 myData = rscData(idx,:);
 % code Rsc sign: 1 = negative; 2 = positive
 myData.codedSign(myData.rscObserved < 0) = 1;
 myData.codedSign(myData.rscObserved > 0) = 2;
-% separate FAST a nd ACCURATE
-fastTbl = myData(ismember(myData.satCondition,'Fast'),{'PairUid','isSefErrorUnit','codedSign','rscObserved'});
-accuTbl = myData(ismember(myData.satCondition,'Accurate'),{'PairUid','isSefErrorUnit','codedSign','rscObserved'});
+% separate FAST and ACCURATE
+fastTbl = myData(ismember(myData.satCondition,'Fast'),{'PairUid','isSefErrorUnit','codedSign','rscObserved','pvalObserved','signif05'});
+accuTbl = myData(ismember(myData.satCondition,'Accurate'),{'PairUid','isSefErrorUnit','codedSign','rscObserved','pvalObserved','signif05'});
 
 temp = outerjoin(accuTbl,fastTbl,'LeftKeys',{'PairUid'},'RightKeys',{'PairUid'});
 fastAccuTbl = table();
@@ -42,12 +42,14 @@ idx = temp.codedSign_accuTbl == 1; % negative Rsc
 fastAccuTbl.AccuRho = temp.rscObserved_accuTbl;
 fastAccuTbl.AccuRhoSign(idx) = repmat({'AccuMinus'},sum(idx),1);
 fastAccuTbl.AccuRhoSign(~idx) = repmat({'AccuPlus'},sum(~idx),1);
+fastAccuTbl.AccuSignif05 = temp.signif05_accuTbl;
 % do for fast
 fastAccuTbl.FastRhoSign = repmat({''},size(temp,1),1);
 idx = temp.codedSign_fastTbl == 1; % negative Rsc
 fastAccuTbl.FastRho = temp.rscObserved_fastTbl;
 fastAccuTbl.FastRhoSign(idx) = repmat({'FastMinus'},sum(idx),1);
 fastAccuTbl.FastRhoSign(~idx) = repmat({'FastPlus'},sum(~idx),1);
+fastAccuTbl.FastSignif05 = temp.signif05_fastTbl;
 
 fastAccuTbl.codedSignFast = temp.codedSign_fastTbl;
 fastAccuTbl.codedSignAccu = temp.codedSign_accuTbl;
@@ -67,10 +69,11 @@ sourceTarget = {{'AccuMinus','SEF-Error'}
                 {'AccuPlus','SEF-Error'}
                 {'AccuPlus','SEF-Other'}
                 {'SEF-Error','FastMinus'}
-                {'SEF-Error','FastPlus'}
                 {'SEF-Other','FastMinus'}
+                {'SEF-Error','FastPlus'}
                 {'SEF-Other','FastPlus'}
                 };
+
 links = struct();            
 for l = 1:numel(sourceTarget)
     src = sourceTarget{l}{1};
