@@ -75,7 +75,6 @@ end
 
 
 function [hA] = figTemplate(ros,cols)
-%%
 figure;
 set(gcf,'Color',[1 1 1]);
 hA = tight_subplot(ros, cols, [.08 .08],[0.1 0.1],[0.1 0.1]);
