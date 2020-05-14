@@ -226,7 +226,7 @@ h_graph = plot(objGr,'XData',objGr.Nodes.xPos,'YData',objGr.Nodes.yPos,...
     'EdgeLabel',objGr.Edges.Weight,...
     'Interpreter','None');
 set(h_graph,'NodeLabel',{});
-set(h_graph,'Marker','s','MarkerSize',20,'NodeColor',[0.5 0.5 0.5])
+%set(h_graph,'Marker','s','MarkerSize',20,'NodeColor',[0.5 0.5 0.5])
 bgColor = get(gcf,'Color');
 set(get(h_graph,'Parent'),'XColor',bgColor,'YColor',bgColor)
 set(get(h_graph,'Parent'),'XTick',[],'YTick',[]);
