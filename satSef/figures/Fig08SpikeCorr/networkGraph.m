@@ -137,7 +137,8 @@ for sc = 1:numel(satConds)
     end
 end
 fn ='Da_Eu_NetworkPlot_SignifRsc_dr.pdf';
-print(fn,'-fillpage','-dpdf','-painters')
+%print(fn,'-fillpage','-dpdf','-painters')
+saveFigPdf(fn)
 
 %%
 function [h_graph] = plotGraph(objGr)
@@ -333,7 +334,7 @@ end
 %%
 function [hA] = figTemplate(ros,cols)
     figure;
-    set(gcf,'Color',[1 1 1],'Position',[100 100 1400 800],'PaperOrientation','landscape');
+    set(gcf,'Color',[1 1 1],'Position',[50 50 1500 900],'PaperOrientation','landscape');
     hA = tight_subplot(ros, cols, [.1 .1],[0.07 0.07],[0.07 0.07]);
     for ii = 1:numel(hA)
         axes(hA(ii))
