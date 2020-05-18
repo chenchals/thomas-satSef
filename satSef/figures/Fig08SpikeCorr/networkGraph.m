@@ -50,9 +50,6 @@ for sc = 1:numel(satConds)
         sefErrUnits = unique(sumTbl.X_unitNum,'stable');
         for un = 1:numel(sefErrUnits)
             unitNum = sefErrUnits(un);
-            if unitNum == 97
-                fprintf('UnitNUm = %d\n',unitNum);
-            end
             unitTbl = sumTbl(sumTbl.X_unitNum == unitNum,:);
             if numel(unique(unitTbl.Y_area)) == 2 % unit is connected to both FEF and SC
                 srcNodeP = 'SEF2FEF_SC_P';
