@@ -30,114 +30,129 @@ spkCorr = sortrows(spkCorr,{'X_unitNum','satCondition','outcome','Y_area','plusR
 
 %% For each SEF error unit, find how many FEF or SC units they are connected to
 [emptyGraph] = getEmptyGraph();
+filterOptions = {'Da_Eu','Da','Eu','sessions'};
 satConds = {'Fast','Accurate'};
 outcomes = {'ErrorChoice_ErrorTiming','ErrorChoice','ErrorTiming'};
-outStruct = struct();
-for sc = 1:numel(satConds)
-    satCondition = satConds{sc};
-    for oc = 1:numel(outcomes)
-        connGraph = emptyGraph;
-        outcome = outcomes{oc};
-        idxSat = ismember(spkCorr.satCondition,satCondition);
-        if strcmp(outcome,'ErrorChoice_ErrorTiming')
-            idxOutcome = ones(size(spkCorr,1),1);
-        else
-            idxOutcome = ismember(spkCorr.outcome,outcome);
-        end
-        countTbl = spkCorr(idxSat & idxOutcome,{'X_unitNum','Y_unitNum','Y_area','plusRho','minusRho'});
-        sumTbl = grpstats(countTbl,{'X_unitNum','Y_unitNum','Y_area'},{'sum'});
-        
-        sefErrUnits = unique(sumTbl.X_unitNum,'stable');
-        for un = 1:numel(sefErrUnits)
-            unitNum = sefErrUnits(un);
-            unitTbl = sumTbl(sumTbl.X_unitNum == unitNum,:);
-            if numel(unique(unitTbl.Y_area)) == 2 % unit is connected to both FEF and SC
-                srcNodeP = 'SEF2FEF_SC_P';
-                srcNodeM = 'SEF2FEF_SC_M';
-                % FEF target
-                idxSrcPlus = connGraph.findedge(srcNodeP,'FEF_Plus');                
-                idxTargPlus =  find(ismember(unitTbl.Y_area,'FEF') & unitTbl.sum_plusRho > 0);
-                if idxTargPlus
-                    connGraph.Edges.Weight(idxSrcPlus) = connGraph.Edges.Weight(idxSrcPlus) + sum(unitTbl.sum_plusRho(idxTargPlus));
-                    connGraph.Edges.fefUnitNum{idxSrcPlus} = unique([connGraph.Edges.fefUnitNum{idxSrcPlus}; unitTbl.Y_unitNum(idxTargPlus)]);
-                    connGraph.Edges.sefUnitNum{idxSrcPlus} = unique([connGraph.Edges.sefUnitNum{idxSrcPlus}; unitNum]);
-                end
-                idxSrcMinus = connGraph.findedge(srcNodeM,'FEF_Minus');
-                idxTargMinus =  find(ismember(unitTbl.Y_area,'FEF') & unitTbl.sum_minusRho > 0);
-                if idxTargMinus
-                    connGraph.Edges.Weight(idxSrcMinus) = connGraph.Edges.Weight(idxSrcMinus) + sum(unitTbl.sum_minusRho(idxTargMinus));
-                    connGraph.Edges.fefUnitNum{idxSrcMinus} = unique([connGraph.Edges.fefUnitNum{idxSrcMinus}; unitTbl.Y_unitNum(idxTargMinus)]);
-                    connGraph.Edges.sefUnitNum{idxSrcMinus} = unique([connGraph.Edges.sefUnitNum{idxSrcMinus}; unitNum]);
-                end
-                % SC target
-                idxSrcPlus = connGraph.findedge(srcNodeP,'SC_Plus');
-                idxTargPlus =  find(ismember(unitTbl.Y_area,'SC') & unitTbl.sum_plusRho > 0);
-                if idxTargPlus
-                    connGraph.Edges.Weight(idxSrcPlus) = connGraph.Edges.Weight(idxSrcPlus) + sum(unitTbl.sum_plusRho(idxTargPlus));
-                    connGraph.Edges.scUnitNum{idxSrcPlus} = unique([connGraph.Edges.scUnitNum{idxSrcPlus}; unitTbl.Y_unitNum(idxTargPlus)]);
-                    connGraph.Edges.sefUnitNum{idxSrcPlus} = unique([connGraph.Edges.sefUnitNum{idxSrcPlus}; unitNum]);
-                end
-                idxSrcMinus = connGraph.findedge(srcNodeM,'SC_Minus');
-                idxTargMinus =  find(ismember(unitTbl.Y_area,'SC') & unitTbl.sum_minusRho > 0);
-                if idxTargMinus
-                    connGraph.Edges.Weight(idxSrcMinus) = connGraph.Edges.Weight(idxSrcMinus) + sum(unitTbl.sum_minusRho(idxTargMinus));
-                    connGraph.Edges.scUnitNum{idxSrcMinus} = unique([connGraph.Edges.scUnitNum{idxSrcMinus}; unitTbl.Y_unitNum(idxTargMinus)]);
-                    connGraph.Edges.sefUnitNum{idxSrcMinus} = unique([connGraph.Edges.sefUnitNum{idxSrcMinus}; unitNum]);
-                end
-            else % unit is connected to either FEF or SC
-                targNodePre = unitTbl.Y_area{1};
-                srcNodeP = ['SEF2' targNodePre '_P'];
-                srcNodeM = ['SEF2' targNodePre '_M'];
-                % FEF or SC target
-                idxSrcPlus = connGraph.findedge(srcNodeP,[targNodePre '_Plus']);                
-                idxTargPlus =  find(ismember(unitTbl.Y_area,targNodePre) & unitTbl.sum_plusRho > 0);
-                if idxTargPlus
-                    connGraph.Edges.Weight(idxSrcPlus) = connGraph.Edges.Weight(idxSrcPlus) + sum(unitTbl.sum_plusRho(idxTargPlus));
-                    if strcmp(targNodePre,'FEF')
-                     connGraph.Edges.fefUnitNum{idxSrcPlus} = unique([connGraph.Edges.scUnitNum{idxSrcPlus}; unitTbl.Y_unitNum(idxTargPlus)]);
-                    elseif strcmp(targNodePre,'SC')
-                     connGraph.Edges.scUnitNum{idxSrcPlus} = unique([connGraph.Edges.scUnitNum{idxSrcPlus}; unitTbl.Y_unitNum(idxTargPlus)]);
-                    end
-                     connGraph.Edges.sefUnitNum{idxSrcPlus} = unique([connGraph.Edges.sefUnitNum{idxSrcPlus}; unitNum]);
-                end
-                idxSrcMinus = connGraph.findedge(srcNodeM,[targNodePre '_Minus']);
-                idxTargMinus =  find(ismember(unitTbl.Y_area,targNodePre) & unitTbl.sum_minusRho > 0);
-                if idxTargMinus
-                    connGraph.Edges.Weight(idxSrcMinus) = connGraph.Edges.Weight(idxSrcMinus) + sum(unitTbl.sum_minusRho(idxTargMinus));
-                    if strcmp(targNodePre,'FEF')
-                        connGraph.Edges.fefUnitNum{idxSrcMinus} = unique([connGraph.Edges.scUnitNum{idxSrcMinus}; unitTbl.Y_unitNum(idxTargMinus)]);
-                    elseif strcmp(targNodePre,'SC')
-                        connGraph.Edges.scUnitNum{idxSrcMinus} = unique([connGraph.Edges.scUnitNum{idxSrcMinus}; unitTbl.Y_unitNum(idxTargMinus)]);
-                    end
-                    connGraph.Edges.sefUnitNum{idxSrcMinus} = unique([connGraph.Edges.sefUnitNum{idxSrcMinus}; unitNum]);
-                end
-               
+
+for fo = 1:numel(filterOptions)
+    
+    
+    
+    outStruct = struct();
+    for sc = 1:numel(satConds)
+        satCondition = satConds{sc};
+        for oc = 1:numel(outcomes)
+            connGraph = emptyGraph;
+            outcome = outcomes{oc};
+            idxSat = ismember(spkCorr.satCondition,satCondition);
+            if strcmp(outcome,'ErrorChoice_ErrorTiming')
+                idxOutcome = ones(size(spkCorr,1),1);
+            else
+                idxOutcome = ismember(spkCorr.outcome,outcome);
             end
-           
-        end
-        outStruct.(satCondition).(outcome).connGraph = connGraph;       
-        outStruct.(satCondition).(outcome).countTbl = countTbl;
-    end
-end
-%% plot network graph for [all, ErrorChoice, ErrorTiming] for fast and accurate
-H_axes = figTemplate(2,3);
-plotNo = 0;
-for sc = 1:numel(satConds)
-    satCondition = satConds{sc};
-    for oc = 1:numel(outcomes)
-        outcome = outcomes{oc};
-        objGraph = outStruct.(satCondition).(outcome).connGraph;
-        plotNo = plotNo + 1;
-        axes(H_axes(plotNo)); %#ok<*LAXES>
-        plotGraph(objGraph);
-        title([satCondition ' - ' outcome],'FontSize',12,'FontWeight','bold','Interpreter','none');
-    end
-end
-fn ='Da_Eu_NetworkPlot_SignifRsc_dr.pdf';
-%print(fn,'-fillpage','-dpdf','-painters')
-saveFigPdf(fn)
+            countTbl = spkCorr(idxSat & idxOutcome,{'X_unitNum','Y_unitNum','Y_area','plusRho','minusRho'});
+            sumTbl = grpstats(countTbl,{'X_unitNum','Y_unitNum','Y_area'},{'sum'});
+            
+            sefErrUnits = unique(sumTbl.X_unitNum,'stable');
+            for un = 1:numel(sefErrUnits)
+                unitNum = sefErrUnits(un);
+                unitTbl = sumTbl(sumTbl.X_unitNum == unitNum,:);
+                if numel(unique(unitTbl.Y_area)) == 2 % unit is connected to both FEF and SC
+                    srcNodeP = 'SEF2FEF_SC_P';
+                    srcNodeM = 'SEF2FEF_SC_M';
+                    % FEF target
+                    idxSrcPlus = connGraph.findedge(srcNodeP,'FEF_Plus');
+                    idxTargPlus =  find(ismember(unitTbl.Y_area,'FEF') & unitTbl.sum_plusRho > 0);
+                    if idxTargPlus
+                        connGraph.Edges.Weight(idxSrcPlus) = connGraph.Edges.Weight(idxSrcPlus) + sum(unitTbl.sum_plusRho(idxTargPlus));
+                        connGraph.Edges.fefUnitNum{idxSrcPlus} = unique([connGraph.Edges.fefUnitNum{idxSrcPlus}; unitTbl.Y_unitNum(idxTargPlus)]);
+                        connGraph.Edges.sefUnitNum{idxSrcPlus} = unique([connGraph.Edges.sefUnitNum{idxSrcPlus}; unitNum]);
+                    end
+                    idxSrcMinus = connGraph.findedge(srcNodeM,'FEF_Minus');
+                    idxTargMinus =  find(ismember(unitTbl.Y_area,'FEF') & unitTbl.sum_minusRho > 0);
+                    if idxTargMinus
+                        connGraph.Edges.Weight(idxSrcMinus) = connGraph.Edges.Weight(idxSrcMinus) + sum(unitTbl.sum_minusRho(idxTargMinus));
+                        connGraph.Edges.fefUnitNum{idxSrcMinus} = unique([connGraph.Edges.fefUnitNum{idxSrcMinus}; unitTbl.Y_unitNum(idxTargMinus)]);
+                        connGraph.Edges.sefUnitNum{idxSrcMinus} = unique([connGraph.Edges.sefUnitNum{idxSrcMinus}; unitNum]);
+                    end
+                    % SC target
+                    idxSrcPlus = connGraph.findedge(srcNodeP,'SC_Plus');
+                    idxTargPlus =  find(ismember(unitTbl.Y_area,'SC') & unitTbl.sum_plusRho > 0);
+                    if idxTargPlus
+                        connGraph.Edges.Weight(idxSrcPlus) = connGraph.Edges.Weight(idxSrcPlus) + sum(unitTbl.sum_plusRho(idxTargPlus));
+                        connGraph.Edges.scUnitNum{idxSrcPlus} = unique([connGraph.Edges.scUnitNum{idxSrcPlus}; unitTbl.Y_unitNum(idxTargPlus)]);
+                        connGraph.Edges.sefUnitNum{idxSrcPlus} = unique([connGraph.Edges.sefUnitNum{idxSrcPlus}; unitNum]);
+                    end
+                    idxSrcMinus = connGraph.findedge(srcNodeM,'SC_Minus');
+                    idxTargMinus =  find(ismember(unitTbl.Y_area,'SC') & unitTbl.sum_minusRho > 0);
+                    if idxTargMinus
+                        connGraph.Edges.Weight(idxSrcMinus) = connGraph.Edges.Weight(idxSrcMinus) + sum(unitTbl.sum_minusRho(idxTargMinus));
+                        connGraph.Edges.scUnitNum{idxSrcMinus} = unique([connGraph.Edges.scUnitNum{idxSrcMinus}; unitTbl.Y_unitNum(idxTargMinus)]);
+                        connGraph.Edges.sefUnitNum{idxSrcMinus} = unique([connGraph.Edges.sefUnitNum{idxSrcMinus}; unitNum]);
+                    end
+                else % unit is connected to either FEF or SC
+                    targNodePre = unitTbl.Y_area{1};
+                    srcNodeP = ['SEF2' targNodePre '_P'];
+                    srcNodeM = ['SEF2' targNodePre '_M'];
+                    % FEF or SC target
+                    idxSrcPlus = connGraph.findedge(srcNodeP,[targNodePre '_Plus']);
+                    idxTargPlus =  find(ismember(unitTbl.Y_area,targNodePre) & unitTbl.sum_plusRho > 0);
+                    if idxTargPlus
+                        connGraph.Edges.Weight(idxSrcPlus) = connGraph.Edges.Weight(idxSrcPlus) + sum(unitTbl.sum_plusRho(idxTargPlus));
+                        if strcmp(targNodePre,'FEF')
+                            connGraph.Edges.fefUnitNum{idxSrcPlus} = unique([connGraph.Edges.scUnitNum{idxSrcPlus}; unitTbl.Y_unitNum(idxTargPlus)]);
+                        elseif strcmp(targNodePre,'SC')
+                            connGraph.Edges.scUnitNum{idxSrcPlus} = unique([connGraph.Edges.scUnitNum{idxSrcPlus}; unitTbl.Y_unitNum(idxTargPlus)]);
+                        end
+                        connGraph.Edges.sefUnitNum{idxSrcPlus} = unique([connGraph.Edges.sefUnitNum{idxSrcPlus}; unitNum]);
+                    end
+                    idxSrcMinus = connGraph.findedge(srcNodeM,[targNodePre '_Minus']);
+                    idxTargMinus =  find(ismember(unitTbl.Y_area,targNodePre) & unitTbl.sum_minusRho > 0);
+                    if idxTargMinus
+                        connGraph.Edges.Weight(idxSrcMinus) = connGraph.Edges.Weight(idxSrcMinus) + sum(unitTbl.sum_minusRho(idxTargMinus));
+                        if strcmp(targNodePre,'FEF')
+                            connGraph.Edges.fefUnitNum{idxSrcMinus} = unique([connGraph.Edges.scUnitNum{idxSrcMinus}; unitTbl.Y_unitNum(idxTargMinus)]);
+                        elseif strcmp(targNodePre,'SC')
+                            connGraph.Edges.scUnitNum{idxSrcMinus} = unique([connGraph.Edges.scUnitNum{idxSrcMinus}; unitTbl.Y_unitNum(idxTargMinus)]);
+                        end
+                        connGraph.Edges.sefUnitNum{idxSrcMinus} = unique([connGraph.Edges.sefUnitNum{idxSrcMinus}; unitNum]);
+                    end
+                    
+                end
+                
+            end
+            outStruct.(satCondition).(outcome).connGraph = connGraph;
+            outStruct.(satCondition).(outcome).countTbl = countTbl;
+        end % outcomes
+    end % satConds
+    
+    %% plot network graph for [all, ErrorChoice, ErrorTiming] for fast and accurate
+    plotAllObjectGraphs(outStruct,satConds,outcomes);
+    % TODO Figure title
+    
+    fn ='Da_Eu_NetworkPlot_SignifRsc_dr.pdf';
+    %print(fn,'-fillpage','-dpdf','-painters')
+    saveFigPdf(fn)
+end % filterOptions
 
 %%
+function [] = plotAllObjectGraphs(outStruct,satConds,outcomes)
+    H_axes = figTemplate(2,3);
+    plotNo = 0;
+    for sc = 1:numel(satConds)
+        satCondition = satConds{sc};
+        for oc = 1:numel(outcomes)
+            outcome = outcomes{oc};
+            objGraph = outStruct.(satCondition).(outcome).connGraph;
+            plotNo = plotNo + 1;
+            axes(H_axes(plotNo)); %#ok<*LAXES>
+            plotGraph(objGraph);
+            title([satCondition ' - ' outcome],'FontSize',12,'FontWeight','bold','Interpreter','none');
+        end
+    end
+end
+
+
 function [h_graph] = plotGraph(objGr)
 %lw = scaleVector(objGr.Edges.Weight,1,10);
 % remoce all edges with 0 weight (ie no connections)
