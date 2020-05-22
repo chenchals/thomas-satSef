@@ -5,31 +5,38 @@
 %  h = plotGraph(objGr);
 
 %% Read and trim data for network graph
-spkCorr = load('dataProcessed/satSefPaper/rscSubSampl1K_PostSaccade.mat');
+allSpkCorr = load('dataProcessed/satSefPaper/rscSubSampl1K_PostSaccade.mat');
 % output dir 
 oPdfDir = 'dataProcessed/satSefPaper/Figures/fig08/networkGraph';
 if ~exist(oPdfDir,'dir')
     mkdir(oPdfDir);
 end
 % significant spk corr values
-spkCorr = spkCorr.spkCorr;
+allSpkCorr = allSpkCorr.spkCorr;
 % recode error neurons
-spkCorr.isSefErrorUnit = abs(spkCorr.X_errGrade) > 1 | abs(spkCorr.X_rewGrade) > 1;
+allSpkCorr.isSefErrorUnit = abs(allSpkCorr.X_errGrade) > 1 | abs(allSpkCorr.X_rewGrade) > 1;
 % recode sat and outcome
-spkCorr.satCondition = regexprep(spkCorr.condition,{'Correct','Error.*'},{'',''});
-spkCorr.outcome = regexprep(spkCorr.condition,{'Fast','Accurate'},{'',''});
+allSpkCorr.satCondition = regexprep(allSpkCorr.condition,{'Correct','Error.*'},{'',''});
+allSpkCorr.outcome = regexprep(allSpkCorr.condition,{'Fast','Accurate'},{'',''});
 % spike count corr sign
-spkCorr.plusRho(spkCorr.rhoRaw > 0) = 1;
-spkCorr.minusRho(spkCorr.rhoRaw < 0) = 1;
+allSpkCorr.plusRho(allSpkCorr.rhoRaw > 0) = 1;
+allSpkCorr.minusRho(allSpkCorr.rhoRaw < 0) = 1;
 
-%% Filter
-% 
-% Considering ONLY SEF error (choice + timing) neurons, and ONLY those with
-% stat signif correlation values, for each session draw a diagram like that
-% below.  Significant correlations will be referred to as ?connections?  
+%% Filter 
+signifVals = [1 0];
+for sv = 1:numel(signifVals)
+
+signifVal = signifVals(sv);
+if signifVal == 1
+    signifStr = 'SignifRsc';
+    spkCorr = allSpkCorr(allSpkCorr.signifRaw_05 == 1,:);
+else
+    signifStr = 'NonSignifRsc';
+    spkCorr = allSpkCorr(allSpkCorr.signifRaw_05 == 0,:);
+end
+
 idxErr = spkCorr.isSefErrorUnit == 1 ...
-      & ismember(spkCorr.outcome,{'Correct','ErrorChoice','ErrorTiming'}) ...
-      & spkCorr.signifRaw_05 == 1; 
+      & ismember(spkCorr.outcome,{'Correct','ErrorChoice','ErrorTiming'}); 
 spkCorr = spkCorr(idxErr,{'X_monkey','X_sess','satCondition','outcome','X_unitNum','Y_unitNum','Y_area','plusRho','minusRho'});
 spkCorr = sortrows(spkCorr,{'X_unitNum','satCondition','outcome','Y_area','plusRho','minusRho'});
 
@@ -161,17 +168,22 @@ for fo = 1:numel(filterOptions)
         %% plot network graph for [all, ErrorChoice, ErrorTiming] for fast and accurate
         plotAllObjectGraphs(outStruct,satConds,outcomes);
         % TODO Figure title
-        annotation('textbox','String',figTitle,'Interpreter','none',...
+        titleSuffix = 'Pairs where pval for Rsc is **significant**';
+        if contains(signifStr,'Non')
+         titleSuffix = 'Pairs where pval for Rsc is NOT significant';
+        end
+        annotation('textbox','String',[figTitle ' - ' titleSuffix],'Interpreter','none',...
             'FontSize',18,'FontWeight','bold','LineStyle','none',...
-            'Position', [0.4 0.9 0.2 0.1]);
+            'Position', [0.2 0.9 0.8 0.1]);
         
-        fname =  [regexprep(figTitle,' ', '-') '_NetworkPlot_SignifRsc.pdf'];
+        fname =  [regexprep(figTitle,' ', '-') '_NetworkPlot_' signifStr '.pdf'];
         fn = fullfile(oPdfDir,fname);
         %print(fn,'-fillpage','-dpdf','-painters')
         h_fig = saveFigPdf(fn);
         delete(h_fig);
     end % for each spkCorrCellArr
 end % filterOptions
+end % for pval signif = 1 or 0
 
 %%
 function [] = plotAllObjectGraphs(outStruct,satConds,outcomes)
