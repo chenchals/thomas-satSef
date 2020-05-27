@@ -1,4 +1,5 @@
 function [spkCorr] = createSpikeCorrWithSubSampling()
+% see getCrossAreaPairs() sub function
 % CREATESPIKECORRWITHSUBSAMPLING: Create spike count correlation data set
 %   for pairs of units recorded from same session for cross areas.
 %   FOR-each-session in sessions DO --> cant do because for some units in the
@@ -72,7 +73,7 @@ function [spkCorr] = createSpikeCorrWithSubSampling()
     % Setup time windows for different event time alignment, the field names
     % SHALL correspond to column names for trialEventTimes below.
     % output file
-    outFile = 'rscSubSampl1K_PostSaccade.mat';
+    outFile = 'rscSubSampl1K_PostSaccade_SEF_and_FEF_crossPairs.mat';
 
     alignNames = {'PostSaccade'}; % {'Baseline','Visual','PostSaccade','PostReward'};
     alignEvents = {'SaccadePrimary'}; % {'CueOn','CueOn','SaccadePrimary','RewardTime'};
@@ -257,13 +258,19 @@ function [rhoEst,rhoEstSem,percentileCI,normalCI,subSampleIdxs,rhoVecSubSamples]
 end
 
 function [cellPairs] = getCrossAreaPairs(pairsFile)
+    % using both SEF and FEF cross area pairs
     allCellPairs = load(pairsFile);
     allCellPairs = allCellPairs.satSefPairCellInfoDB;
-     monkIdsToDo = {'D','E'};
+    monkIdsToDo = {'D','E'};
     allCellPairs = allCellPairs(ismember([allCellPairs.X_monkey],monkIdsToDo),:);
-    idxCrossArea = ismember(allCellPairs.X_area,'SEF') & ...
-                   (ismember(allCellPairs.Y_area,'FEF') | ...
-                    ismember(allCellPairs.Y_area,'SC'));
+    idxCrossAreaSEF = ismember(allCellPairs.X_area,'SEF') & ...
+        (ismember(allCellPairs.Y_area,'FEF') | ...
+        ismember(allCellPairs.Y_area,'SC'));
+
+%     idxCrossAreaFEF = ismember(allCellPairs.X_area,'FEF') & ...
+%         ismember(allCellPairs.Y_area,'SC');
+%    idxCrossArea =   idxCrossAreaSEF | idxCrossAreaFEF;
+    idxCrossArea = idxCrossAreaSEF;
     cellPairs = allCellPairs(idxCrossArea,:);
     assert(isequal(cellPairs.X_sess,cellPairs.Y_sess),'********Fatal: Error X-Unit sessions and Y-Unit sessions do not match');
     fprintf('Done getCrossAreaPairs()\n')

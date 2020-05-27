@@ -1,4 +1,5 @@
 function [spkCorr] = createSatSefRscWithSubSampling()
+% for figure8: use: figures/Fig08SpkCorr/createSpikeCorrWithSubSampling.m
 % Create spike count correlation data set 
 % for pairs of units recorded from same session for cross areas.
 % FOR-each-session in sessions DO --> cant do because for some units in the
