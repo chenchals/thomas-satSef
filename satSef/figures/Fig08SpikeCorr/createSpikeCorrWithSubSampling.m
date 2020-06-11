@@ -72,7 +72,7 @@ function [spkCorr] = createSpikeCorrWithSubSampling()
     % Setup time windows for different event time alignment, the field names
     % SHALL correspond to column names for trialEventTimes below.
     % output file
-    outFile = 'rscSubSampl1K_PostSaccade.mat';
+    outFile = 'rscSubSampl1K_PostSaccade_0_TrialsThresh.mat';
 
     alignNames = {'PostSaccade'}; % {'Baseline','Visual','PostSaccade','PostReward'};
     alignEvents = {'SaccadePrimary'}; % {'CueOn','CueOn','SaccadePrimary','RewardTime'};
@@ -86,7 +86,7 @@ function [spkCorr] = createSpikeCorrWithSubSampling()
     staticWinsAlignTs(1).PostSaccade = [0 150];
     staticWinsAlignTs(1).PostReward = [0 150];
     % minimum number of trials for all conditions, if not, then ignore pair  
-    nTrialsThreshold = 10; %10;%3 should reproduce the old result 
+    nTrialsThreshold = 0; %10;%3 should reproduce the old result 
     nSubSamples = 1000; % number of times to subsample
     
     %% Process  (use parfor, when available)
