@@ -1,4 +1,7 @@
 function [spkCorr] = createSpikeCorrWithSubSampling()
+% Note 2020-JUN-11: nTrialsThreshold is set to '0' to include E20130829001
+% for getting some additional pairs. 
+% see getCrossAreaPairs() sub function
 % CREATESPIKECORRWITHSUBSAMPLING: Create spike count correlation data set
 %   for pairs of units recorded from same session for cross areas.
 %   FOR-each-session in sessions DO --> cant do because for some units in the
@@ -72,6 +75,7 @@ function [spkCorr] = createSpikeCorrWithSubSampling()
     % Setup time windows for different event time alignment, the field names
     % SHALL correspond to column names for trialEventTimes below.
     % output file
+
     outFile = 'rscSubSampl1K_PostSaccade_0_TrialsThresh.mat';
 
     alignNames = {'PostSaccade'}; % {'Baseline','Visual','PostSaccade','PostReward'};
@@ -109,7 +113,7 @@ function [spkCorr] = createSpikeCorrWithSubSampling()
     pctRunOnAll warning off;
     %parfor (cp = 1:nCrossPairs,nThreads)%nCrossPairs
     parfor (cp = 1:nCrossPairs,nThreads)%nCrossPairs
-    %for (cp = 1:nCrossPairs)%nCrossPairs
+    %for (cp = nCrossPairs:-1:1)%nCrossPairs
         %%
         fprintf('doing pair %d\n',cp)
         crossPair = crossPairs(cp,:);
@@ -257,13 +261,19 @@ function [rhoEst,rhoEstSem,percentileCI,normalCI,subSampleIdxs,rhoVecSubSamples]
 end
 
 function [cellPairs] = getCrossAreaPairs(pairsFile)
+    % using both SEF and FEF cross area pairs
     allCellPairs = load(pairsFile);
     allCellPairs = allCellPairs.satSefPairCellInfoDB;
-     monkIdsToDo = {'D','E'};
+    monkIdsToDo = {'D','E'};
     allCellPairs = allCellPairs(ismember([allCellPairs.X_monkey],monkIdsToDo),:);
-    idxCrossArea = ismember(allCellPairs.X_area,'SEF') & ...
-                   (ismember(allCellPairs.Y_area,'FEF') | ...
-                    ismember(allCellPairs.Y_area,'SC'));
+    idxCrossAreaSEF = ismember(allCellPairs.X_area,'SEF') & ...
+        (ismember(allCellPairs.Y_area,'FEF') | ...
+        ismember(allCellPairs.Y_area,'SC'));
+
+%     idxCrossAreaFEF = ismember(allCellPairs.X_area,'FEF') & ...
+%         ismember(allCellPairs.Y_area,'SC');
+%    idxCrossArea =   idxCrossAreaSEF | idxCrossAreaFEF;
+    idxCrossArea = idxCrossAreaSEF;
     cellPairs = allCellPairs(idxCrossArea,:);
     assert(isequal(cellPairs.X_sess,cellPairs.Y_sess),'********Fatal: Error X-Unit sessions and Y-Unit sessions do not match');
     fprintf('Done getCrossAreaPairs()\n')
