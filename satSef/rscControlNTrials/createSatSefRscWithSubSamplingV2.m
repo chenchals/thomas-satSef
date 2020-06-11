@@ -1,6 +1,13 @@
 function [spkCorr] = createSatSefRscWithSubSamplingV2()
-% for figure8: use: figures/Fig08SpkCorr/createSpikeCorrWithSubSampling.m
-% Create spike count correlation data set 
+% for figure8: use: satSef/figures/Fig08SpikeCorr/createSpikeCorrWithSubSampling.m
+createSatSefDb = 'satSef/figures/Fig08SpikeCorr/createSpikeCorrWithSubSampling.m';
+if (1)
+    
+    warning('for figure8 of SAT-SEF paper use: %s',createSatSefDb);
+    edit('satSef/figures/Fig08SpikeCorr/createSpikeCorrWithSubSampling.m')
+    error('Open createSatSefRscWithSubSamplingV2.m and read comments!')
+end
+% Create spike count correlation data set
 % for pairs of units recorded from same session for cross areas.
 % FOR-each-session in sessions DO --> cant do because for some units in the
 % session a varying no. of trials have to be removed, bu tnot for other

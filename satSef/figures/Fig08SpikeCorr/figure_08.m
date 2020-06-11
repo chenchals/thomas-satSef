@@ -123,6 +123,8 @@ end
 
 
 %%
+%    doBarplotAndAnovaFor(rscTable,rhoType,useMonkeys,useAreaTypes)
+
 function [] = doBarplotAndAnovaFor(rscTable,rhoType,useMonkeys,useUnitTypes)
 % rhoType: [Absolute|Signed|Positive|Negative] 
 if sum(contains(useUnitTypes{:},'ERROR')) > 0 

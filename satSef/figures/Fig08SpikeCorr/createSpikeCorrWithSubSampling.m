@@ -1,4 +1,6 @@
 function [spkCorr] = createSpikeCorrWithSubSampling()
+% Note 2020-JUN-11: nTrialsThreshold is set to '0' to include E20130829001
+% for getting some additional pairs. 
 % see getCrossAreaPairs() sub function
 % CREATESPIKECORRWITHSUBSAMPLING: Create spike count correlation data set
 %   for pairs of units recorded from same session for cross areas.
@@ -73,7 +75,7 @@ function [spkCorr] = createSpikeCorrWithSubSampling()
     % Setup time windows for different event time alignment, the field names
     % SHALL correspond to column names for trialEventTimes below.
     % output file
-    outFile = 'rscSubSampl1K_PostSaccade_SEF_and_FEF_crossPairs.mat';
+    outFile = 'rscSubSampl1K_PostSaccade_SEF_and_FEF_crossPairs_0TrlsThrseh.mat';
 
     alignNames = {'PostSaccade'}; % {'Baseline','Visual','PostSaccade','PostReward'};
     alignEvents = {'SaccadePrimary'}; % {'CueOn','CueOn','SaccadePrimary','RewardTime'};
@@ -110,7 +112,7 @@ function [spkCorr] = createSpikeCorrWithSubSampling()
     pctRunOnAll warning off;
     %parfor (cp = 1:nCrossPairs,nThreads)%nCrossPairs
     parfor (cp = 1:nCrossPairs,nThreads)%nCrossPairs
-    %for (cp = 1:nCrossPairs)%nCrossPairs
+    %for (cp = nCrossPairs:-1:1)%nCrossPairs
         %%
         fprintf('doing pair %d\n',cp)
         crossPair = crossPairs(cp,:);
