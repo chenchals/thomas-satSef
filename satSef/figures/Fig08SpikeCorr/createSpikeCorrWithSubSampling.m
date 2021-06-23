@@ -1,0 +1,387 @@
+function [spkCorr] = createSpikeCorrWithSubSampling()
+% Note 2020-JUN-11: nTrialsThreshold is set to '0' to include E20130829001
+% for getting some additional pairs. 
+% see getCrossAreaPairs() sub function
+% CREATESPIKECORRWITHSUBSAMPLING: Create spike count correlation data set
+%   for pairs of units recorded from same session for cross areas.
+%   FOR-each-session in sessions DO --> cant do because for some units in the
+%   session a varying no. of trials have to be removed, bu tnot for other
+%   units. So we do not have a 'clear' nTrialsPerOutcome that is same for all
+%   recorded units.  Instead we need to do the computations on a
+%   neuron-neuron-pair basis. This is good because we do not have to
+%   eliminate whole session.
+% crossPairs = getAllCrossPairs-no-filtering
+% FOR-each-crossPair in crossPairs DO
+%   trialNos4SatConds = getTrialNosForAllSatConds(removeTrialNos-
+%                             for-pair-if-present-on-any-unit-in-pair)
+%   nTrials4SatConds = countTrials4SatConds(trialNos4SatConds)
+%   IF min(trialNos4SatConds) < nTrialsThreshold THEN
+%       ignore crossPair, go to next crossPair
+%   ELSE-IF-min(trialNos4SatConds) >= nTrialsThreshold THEN
+%       satCondWithMinTrials = whichSatCondIs(nTrials4SubSample)
+%       satConds2SubSample = whichSatCondIs(>nTrials4SubSample)
+%       FOR-each-satCond in allSatConds DO
+%           trialsNos4SatCond = getFrom(trialNos4SatConds,satCond)
+%           nTrials4SatCond = count(trialsNos4SatCond)
+%           [X_unitSpkCountByTrial, Y_unitSpkCountByTrial] =
+%                getSpkCounts(X_unitAlignedTimes,Y_unitAlignedTimes,timWin)
+%           [X_unitSpkCountMean,X_unitSpkCountStd] =
+%                getSpkCountStats(X_unitAlignedSpikes)
+%           [Y_unitSpkCountMean,Y_unitSpkCountStd] =
+%                getSpkCountStats(Y_unitAlignedSpikes)
+%           [cpRsc,cpPairPval] = corr(X_unitSpkCountByTrial,
+%                Y_unitSpkCountByTrial) Pearson's
+%            IF-is-member(satConds2SubSample,satCond) THEN
+%                nTerials4SubSample = 40 or 80;
+%                FOR-1-to-nSubSamples DO
+%                    subSampIdx = subsample(1:nTrials4SatCond,
+%                        nTrials4SubSample) 
+%                    estimatedRscVec(loop-count) =
+%                        corr(X_unitSpkCountByTrial(subSampIdx), 
+%                        Y_unitSpkCountByTrial(subSampIdx)) Pearson's
+%                LOOP-FOR-nSubSamples
+%                estimatedRsc4Cond = mean(estimatedRscVec)
+%                confIntRsc4Cond = CI(estimatedRscVec,0.95) 
+%            ELSE-IF-not-is-member(satConds2SubSample,satCond) THEN
+%                GOTO-next-satCond
+%            END-IF- is-member(satConds2SubSample,satCond)
+%       LOOP-FOR-eachSatCond
+%   END-ELSE-IF-min(nTrial count) >= nTrialsThreshold
+% LOOP-FOR-each-crossPair
+
+% Expects the following files in specified location:
+% 1. Inofrmation about all possible cell pairs:
+%        'dataProcessed/satSefPaper/dataset/SAT_SEF_PAIR_CellInfoDB.mat'
+% 2. Trial types of all sessions (Accurate, Fast, Correct,...):
+%        'dataProcessed/satSefPaper/dataset/SAT_SEF_TrialTypesDB.mat'
+% 3. Event times for all trials and all sessions:
+%         'dataProcessed/satSefPaper/dataset/SAT_SEF_TrialEventTimesDB.mat'
+% 4. Get resptime and set it as SaccadePrimaryTempo
+%         'dataProcessed/dataset/binfo_moves_SAT.mat'
+% 5. Spike time data for all units of all sessions:
+%         'dataProcessed/dataset/spikes_SAT.mat'
+%
+%% File refs for data to computing Rsc
+    warning('off');
+    %Options for Spk Corr computation
+    datasetDir = 'dataProcessed/satSefPaper/dataset';
+    % Files for getting data to compute Rsc
+    pairsFile = fullfile(datasetDir,'SAT_SEF_PAIR_CellInfoDB.mat');
+    trialTypesFile = fullfile(datasetDir,'SAT_SEF_TrialTypesDB.mat');
+    trialEventTimesFile = fullfile(datasetDir,'SAT_SEF_TrialEventTimesDB.mat');
+    spikeTimesFile = fullfile(datasetDir,'spikes_SAT.mat');
+
+    % alignment
+    % Setup time windows for different event time alignment, the field names
+    % SHALL correspond to column names for trialEventTimes below.
+    % output file
+
+    outFile = 'rscSubSampl1K_PostSaccade_0_TrialsThresh.mat';
+
+    alignNames = {'PostSaccade'}; % {'Baseline','Visual','PostSaccade','PostReward'};
+    alignEvents = {'SaccadePrimary'}; % {'CueOn','CueOn','SaccadePrimary','RewardTime'};
+    alignTimeWin = {[-100 500]}; % {[-600 100],[-200 400],[-100 500],[-200 700]};
+
+    conditions = {'AccurateCorrect';'AccurateErrorChoice';'AccurateErrorTiming';
+        'FastCorrect';    'FastErrorChoice';    'FastErrorTiming'
+        };
+    staticWinsAlignTs(1).Baseline = [-150 0];
+    staticWinsAlignTs(1).Visual = [0 150];
+    staticWinsAlignTs(1).PostSaccade = [0 150];
+    staticWinsAlignTs(1).PostReward = [0 150];
+    % minimum number of trials for all conditions, if not, then ignore pair  
+    nTrialsThreshold = 0; %10;%3 should reproduce the old result 
+    nSubSamples = 1000; % number of times to subsample
+    
+    %% Process  (use parfor, when available)
+    p = gcp('nocreate');
+    nThreads = 0;
+    if ~isempty(p)
+        nThreads = p.NumWorkers;
+    end
+    
+    %%  Load data needed to compute Rsc
+    crossPairs = getCrossAreaPairs(pairsFile);
+    spikesSat = getSpikes(spikeTimesFile);
+    sessionTrialTypes = getSessionTrialTypes(trialTypesFile);
+    sessionEventTimes = getSessionEventTimes(trialEventTimesFile);
+
+    %%
+    tic
+    nCrossPairs = size(crossPairs,1);
+    spkCorr = table();
+    pctRunOnAll warning off;
+    %parfor (cp = 1:nCrossPairs,nThreads)%nCrossPairs
+    parfor (cp = 1:nCrossPairs,nThreads)%nCrossPairs
+    %for (cp = nCrossPairs:-1:1)%nCrossPairs
+        %%
+        fprintf('doing pair %d\n',cp)
+        crossPair = crossPairs(cp,:);
+        sess = crossPair.X_sess{1};
+        trialTypes = sessionTrialTypes(ismember(sessionTrialTypes.session,sess),:); %#ok<*PFBNS>
+        trRem = getTrialNosToRemove(crossPair);
+        [trialNos4SatConds, nTrials4SatConds] = ...
+            getTrialNosForAllSatConds(trialTypes,trRem,conditions);
+        nTrials4SubSample = min(struct2array(nTrials4SatConds));
+        if nTrials4SubSample < nTrialsThreshold
+            % ignore this pair and go to next pair
+            continue;
+        end
+        % spike times
+        xSpkTimes = spikesSat{crossPair.X_unitNum}';
+        ySpkTimes = spikesSat{crossPair.Y_unitNum}';
+        evntTimes = sessionEventTimes(ismember(sessionEventTimes.session,sess),:);
+        
+        tempCorr = struct();
+        for sc = 1:numel(conditions)
+            condition = conditions{sc};
+            selTrials = trialNos4SatConds.(condition);
+            selTrialsSorted = selTrials; % no sorting
+            for evId = 1:numel(alignEvents)
+                alignedName = alignNames{evId};
+                alignedEvent = alignEvents{evId};
+                alignedTimeWin = alignTimeWin{evId};
+                alignTime = evntTimes.CueOn{1};
+                if ~strcmp(alignedEvent,'CueOn')
+                    alignTime = alignTime + double(evntTimes.(alignedEvent){1}(:));
+                end  
+                alignTime = alignTime(selTrialsSorted);
+                XAligned = SpikeUtils.alignSpikeTimes(xSpkTimes(selTrialsSorted),alignTime, alignedTimeWin);
+                YAligned = SpikeUtils.alignSpikeTimes(ySpkTimes(selTrialsSorted),alignTime, alignedTimeWin);
+                tempRast = SpikeUtils.rasters(XAligned,alignedTimeWin);
+                XRasters = tempRast.rasters;
+                tempRast = SpikeUtils.rasters(YAligned,alignedTimeWin);
+                YRasters = tempRast.rasters;
+                rasterBins = tempRast.rasterBins;                               
+                
+                staticWin = staticWinsAlignTs(1).(alignedName);
+                fieldSuffix = num2str(range(staticWin),'_%dms'); 
+                xSpkCounts = cellfun(@(r,x,w) sum(x(:,r>=w(1) & r<=w(2)),2),...
+                    {rasterBins},{XRasters},{staticWin},'UniformOutput',false);
+                xMeanFrWin = mean(xSpkCounts{1})*1000/range(staticWin);
+                ySpkCounts = cellfun(@(r,x,w) sum(x(:,r>=w(1) & r<=w(2)),2),...
+                    {rasterBins},{YRasters},{staticWin},'UniformOutput',false);
+                yMeanFrWin = mean(ySpkCounts{1})*1000/range(staticWin);
+                [rho_pval] = getSpikeCountCorr(xSpkCounts{1},ySpkCounts{1},'Pearson');
+                %% Do sub-sampling to estimate Rho and CI
+                % nTrials4SubSample, selTrials
+                % does a minTrial count subsampling. But do not need this. 
+                % We will do only 40 / 80 random trials for each nSubSamples
+                %% Since mean-trial-count for Fast-ErrorTiming ~ 40 (37.29)
+                nTrials40SubSample = 40;
+                [rhoEst40,rhoEstSem40,prctile_10_90_nTrials_40,ci95_nTrials_40,subSampleIdxs_40,rhoVecSubSamples_40] = ...
+                     getEstimatedRhoAndConfInterval(xSpkCounts{1},...
+                                                    ySpkCounts{1},...
+                                                    nTrials40SubSample,...
+                                                    nSubSamples,[10 90]);
+                %% Since mean-trial-count for Accurate-ErrorChoice ~ 80 (79.56)
+                nTrials80SubSample = 80;
+                [rhoEst80,rhoEstSem80,prctile_10_90_nTrials_80,ci95_nTrials_80,subSampleIdxs_80,rhoVecSubSamples_80] = ...
+                     getEstimatedRhoAndConfInterval(xSpkCounts{1},...
+                                                    ySpkCounts{1},...
+                                                    nTrials80SubSample,...
+                                                    nSubSamples,[10 90]);
+
+                %% output table/struct
+                % add crosspair info
+                cN = getPairColNmes();
+                cpTemp = table2struct(crossPair,'ToScalar',true);
+                for c = 1:numel(cN)
+                    tempCorr(evId,sc).(cN{c}) = cpTemp.(cN{c});
+                end
+                tempCorr(evId,sc).condition = condition;
+                tempCorr(evId,sc).alignedName = alignedName;
+                tempCorr(evId,sc).alignedEvent = alignedEvent;
+                tempCorr(evId,sc).alignedTimeWin = {alignedTimeWin};
+                tempCorr(evId,sc).alignTime = alignTime;
+                tempCorr(evId,sc).trialNosByCondition = selTrialsSorted;
+                tempCorr(evId,sc).nTrials = numel(selTrialsSorted);
+
+                tempCorr(evId,sc).(['xSpkCount_win' fieldSuffix]) = xSpkCounts;
+                tempCorr(evId,sc).(['ySpkCount_win' fieldSuffix]) = ySpkCounts;
+                tempCorr(evId,sc).(['xMeanFr_spkPerSec_win' fieldSuffix]) = xMeanFrWin;
+                tempCorr(evId,sc).(['yMeanFr_spkPerSec_win' fieldSuffix]) = yMeanFrWin;
+
+                tempCorr(evId,sc).rho_pval_win = {staticWin};                    
+                tempCorr(evId,sc).rhoRaw = rho_pval(1);
+                tempCorr(evId,sc).pvalRaw = rho_pval(2);
+                tempCorr(evId,sc).signifRaw_05 = rho_pval(2) < 0.05;  
+
+                tempCorr(evId,sc).subSamplIdxs_nTrials_40 = {subSampleIdxs_40};
+                tempCorr(evId,sc).rhoVecSubSampl_nTrials_40 = {rhoVecSubSamples_40};                
+                tempCorr(evId,sc).rhoEstRaw_nTrials_40 = rhoEst40;
+                tempCorr(evId,sc).rhoEstSem_nTrials_40 = rhoEstSem40;
+                tempCorr(evId,sc).ci95_nTrials_40 = {ci95_nTrials_40};
+                tempCorr(evId,sc).rhoRawInCi95_nTrials_40 = ci95_nTrials_40(1) < rho_pval(1) & rho_pval(1) < ci95_nTrials_40(2);
+ 
+                tempCorr(evId,sc).subSamplIdxs_nTrials_80 = {subSampleIdxs_80};
+                tempCorr(evId,sc).rhoVecSubSampl_nTrials_80 = {rhoVecSubSamples_80};                
+                tempCorr(evId,sc).rhoEstRaw_nTrials_80 = rhoEst80;
+                tempCorr(evId,sc).rhoEstSem_nTrials_80 = rhoEstSem80;
+                tempCorr(evId,sc).ci95_nTrials_80 = {ci95_nTrials_80};
+                tempCorr(evId,sc).rhoRawInCi95_nTrials_80 = ci95_nTrials_80(1) < rho_pval(1) & rho_pval(1) < ci95_nTrials_80(2);
+
+             
+            end % for aligned event
+            %spkCorr = [spkCorr; [crossPair(1,getPairColNmes) struct2table(opts,'AsArray',true)]];
+        end % for condition
+        try
+        tempCorr = tempCorr(:);
+        for jj=1:numel(tempCorr)
+            spkCorr = [spkCorr; struct2table(tempCorr(jj),'AsArray',true)]; 
+        end
+        fprintf('Done pair %d of %d\n',cp,nCrossPairs)
+        catch me
+            me
+        end
+    end
+toc
+save(outFile,'-v7.3','spkCorr');
+end
+
+function [rhoEst,rhoEstSem,percentileCI,normalCI,subSampleIdxs,rhoVecSubSamples] = ...
+         getEstimatedRhoAndConfInterval(xSpkCounts,ySpkCounts,nTrials4SubSample,nSubSamples, prctileRange)
+    % inline fx for subsampling see DATASAMPLE
+    subSampleIdxs = arrayfun(@(x) single(datasample(1:numel(xSpkCounts),nTrials4SubSample,'Replace',true)'),(1:nSubSamples),'UniformOutput',false);
+    rhoPvalSubSamples = cellfun(@(x) getSpikeCountCorr(xSpkCounts(x),ySpkCounts(x),'Pearson'),subSampleIdxs','UniformOutput',false);
+    rhoPvalSubSamples = cell2mat(rhoPvalSubSamples);
+    rhoVecSubSamples = single(rhoPvalSubSamples(:,1));
+    % compute mean & sem
+    % remove NaNs from computation
+    rhoVecSubSamples(isnan(rhoVecSubSamples)) = [];
+    rhoEst = mean(rhoVecSubSamples);
+    rhoEstSem = std(rhoVecSubSamples)/sqrt(numel(rhoVecSubSamples));
+    % compute t-statistic for 0.025, 0.975
+    ts = tinv([0.025,0.975],nTrials4SubSample-1);
+    normalCI = rhoEst + rhoEstSem*ts;
+    percentileCI =  prctile(rhoVecSubSamples,prctileRange); 
+    
+    % change subSampleIdxs to nSubSamples by nTrials4SubSample
+    subSampleIdxs = cell2mat(subSampleIdxs)';
+end
+
+function [cellPairs] = getCrossAreaPairs(pairsFile)
+    % using both SEF and FEF cross area pairs
+    allCellPairs = load(pairsFile);
+    allCellPairs = allCellPairs.satSefPairCellInfoDB;
+    monkIdsToDo = {'D','E'};
+    allCellPairs = allCellPairs(ismember([allCellPairs.X_monkey],monkIdsToDo),:);
+    idxCrossAreaSEF = ismember(allCellPairs.X_area,'SEF') & ...
+        (ismember(allCellPairs.Y_area,'FEF') | ...
+        ismember(allCellPairs.Y_area,'SC'));
+
+%     idxCrossAreaFEF = ismember(allCellPairs.X_area,'FEF') & ...
+%         ismember(allCellPairs.Y_area,'SC');
+%    idxCrossArea =   idxCrossAreaSEF | idxCrossAreaFEF;
+    idxCrossArea = idxCrossAreaSEF;
+    cellPairs = allCellPairs(idxCrossArea,:);
+    assert(isequal(cellPairs.X_sess,cellPairs.Y_sess),'********Fatal: Error X-Unit sessions and Y-Unit sessions do not match');
+    fprintf('Done getCrossAreaPairs()\n')
+end
+
+function [spikesSat] = getSpikes(spikeTimesFile)
+    spikesSat = load(spikeTimesFile);
+    spikesSat = spikesSat.spikesSAT;
+    fprintf('Done getSpikes()\n')
+end
+
+function [sessionTrialTypes] = getSessionTrialTypes(trialTypesFile)
+    sessionTrialTypes = load(trialTypesFile);
+    sessionTrialTypes = sessionTrialTypes.TrialTypesDB;
+    fprintf('Done getSessionTrialTypes()\n')
+end
+
+function [sessionEventTimes] = getSessionEventTimes(trialEventTimesFile)
+    sessionEventTimes = load(trialEventTimesFile);
+    sessionEventTimes = sessionEventTimes.TrialEventTimesDB;
+    fprintf('Done getSessionEventTimes()\n')
+end
+
+function [trRem] = getTrialNosToRemove(crossPair)
+    trRem = [crossPair.X_trRemSAT{1};crossPair.Y_trRemSAT{1}];
+    if ~isempty(trRem)
+        temp = [];
+        for ii = 1:size(trRem,1)
+            temp = [temp [trRem(ii,1):trRem(ii,2)]]; %#ok<NBRAK,AGROW>
+        end
+        trRem = unique(temp(:));
+    end
+    %fprintf('Done getTrialNosToRemove()\n')
+end
+
+function [trialNos4SatConds,nTrials4SatConds] = getTrialNosForAllSatConds(trialTypes,trRem,conditions)
+   trialNos4SatConds = struct();
+   nTrials4SatConds = struct();
+   for c = 1:numel(conditions)
+       condition = conditions{c};
+       temp = trialTypes.(condition){1};
+       temp(trRem) = 0;
+       temp = find(temp);       
+       trialNos4SatConds.(condition) = temp;
+   end
+   % remove trials common to *ErrorChoice and *ErrorTiming
+   % May not need this since they already seem to be mutually exclusive
+   commonTrialNos = intersect(trialNos4SatConds.AccurateErrorChoice,trialNos4SatConds.AccurateErrorTiming);
+   trialNos4SatConds.AccurateErrorChoice = setdiff(trialNos4SatConds.AccurateErrorChoice,commonTrialNos);
+   trialNos4SatConds.AccurateErrorTiming = setdiff(trialNos4SatConds.AccurateErrorTiming,commonTrialNos);
+   commonTrialNos = intersect(trialNos4SatConds.FastErrorChoice,trialNos4SatConds.FastErrorTiming);
+   trialNos4SatConds.FastErrorChoice = setdiff(trialNos4SatConds.FastErrorChoice,commonTrialNos);
+   trialNos4SatConds.FastErrorTiming = setdiff(trialNos4SatConds.FastErrorTiming,commonTrialNos);
+   % nTrialsFor sat conds
+   for c = 1:numel(conditions)
+       condition = conditions{c};
+       nTrials4SatConds.(condition) = numel(trialNos4SatConds.(condition));
+   end   
+   %fprintf('Done getTrialNosForAllSatConds()\n')   
+end
+
+function [colNames] = getPairColNmes()
+    % cellPairInfo fields to extract
+    colNames = {
+        'Pair_UID'
+        'X_monkey'
+        'X_sessNum'
+        'X_sess'
+        'X_unitNum'
+        'Y_unitNum'
+        'X_unit'
+        'Y_unit'
+        'X_area'
+        'Y_area'
+        'X_visGrade'
+        'Y_visGrade'
+        'X_visField'
+        'Y_visField'
+        'X_visType'
+        'Y_visType'
+        'X_moveGrade'
+        'Y_moveGrade'
+        'X_moveField'
+        'Y_moveField'
+        'X_errGrade'
+        'Y_errGrade'
+        'X_isErrGrade'
+        'Y_isErrGrade'
+        'X_errField'
+        'Y_errField'
+        'X_rewGrade'
+        'Y_rewGrade'
+        'X_isRewGrade'
+        'Y_isRewGrade'
+        'X_taskType'
+        'X_Hemi'
+        'Y_Hemi'
+        'X_Grid'
+        'Y_Grid'
+        'X_GridAP_ML'
+        'Y_GridAP_ML'
+        'X_Depth'
+        'Y_Depth'
+        'X_Depth0'
+        'Y_Depth0'
+        'X_newDepth'
+        'Y_newDepth'
+        'XY_Dist'
+        'isOnSameChannel' 
+        };
+end
